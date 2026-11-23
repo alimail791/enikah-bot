@@ -41,6 +41,8 @@ app.post('/webhook', (req, res) => {
   }
   res.sendStatus(200);
   for (const en of req.body.entry || []) for (const ch of en.changes || []) for (const m of ch.value?.messages || []) {
+    // several numbers can share one Meta app: only answer messages sent to ENikah's own number
+    if (E.WA_PHONE_ID && ch.value.metadata?.phone_number_id !== E.WA_PHONE_ID) continue;
     if (seenIds.has(m.id)) continue;
     seenIds.add(m.id); if (seenIds.size > 5000) seenIds.clear();
     enqueue(m.from, () => onMessage(m.from, parse(m)));
