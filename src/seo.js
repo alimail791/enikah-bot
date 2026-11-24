@@ -24,7 +24,8 @@ export function headTags(req, { path: p, title, desc, jsonld = [] }) {
   const self = base + urlFor(lang, p);
   const alts = ['en', 'ta'].map(l => `<link rel="alternate" hreflang="${l}" href="${base}${urlFor(l, p)}">`).join('')
     + `<link rel="alternate" hreflang="x-default" href="${base}${p}">`;
-  return `<meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="${self}">${alts}
+  const gsv = process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" content="${esc(process.env.GOOGLE_SITE_VERIFICATION)}">` : '';
+  return `${gsv}<meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="${self}">${alts}
 <meta property="og:type" content="website"><meta property="og:site_name" content="ENikah"><meta property="og:locale" content="${lang === 'ta' ? 'ta_IN' : 'en_IN'}">
 <meta property="og:url" content="${self}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="${base}/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -302,7 +303,21 @@ export function contentPage(req, p) {
   return { title, desc, body, head: headTags(req, { path: p, title, desc, jsonld }) };
 }
 
+// IndexNow: tell Bing, Yandex and others about every public page when a new version starts.
+const INDEXNOW_KEY = process.env.INDEXNOW_KEY || '189d9301c8b097ea84ed1f7671b9b50a';
+export async function pingIndexNow() {
+  const base = CFG.base;
+  if (!base.startsWith('https://') || /railway\.app/.test(base) || process.env.INDEXNOW_OFF === '1') return;
+  const urlList = PUBLIC_PATHS.flatMap(p => ['en', 'ta'].map(l => base + urlFor(l, p)));
+  try {
+    const r = await fetch('https://api.indexnow.org/indexnow', { method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ host: new URL(base).host, key: INDEXNOW_KEY, keyLocation: `${base}/${INDEXNOW_KEY}.txt`, urlList }) });
+    console.log('[indexnow] submitted', urlList.length, 'urls:', r.status);
+  } catch (e) { console.log('[indexnow] failed:', e.message); }
+}
+
 export function mountSeo(app) {
+  app.get(`/${INDEXNOW_KEY}.txt`, (req, res) => res.type('text/plain').send(INDEXNOW_KEY));
   app.get('/robots.txt', (req, res) => res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(
     `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /home\nDisallow: /account\nDisallow: /broker\nDisallow: /dashboard\nDisallow: /matches/\nDisallow: /interests\nDisallow: /photo/\nDisallow: /profile/\nDisallow: /reset/\nDisallow: /lang/\nDisallow: /dev/\n\nSitemap: ${CFG.base}/sitemap.xml\n`));
   app.get('/sitemap.xml', (req, res) => {

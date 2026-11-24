@@ -1,6 +1,7 @@
 import express from 'express';
 import { migrate } from './db.js';
 import { mount } from './site.js';
+import { pingIndexNow } from './seo.js';
 import { onPaid, runReminders } from './core.js';
 import { markPaid, webhookOk } from './pay.js';
 
@@ -41,6 +42,6 @@ app.use((err, req, res, next) => {
 
 await migrate();
 const port = Number(E.PORT || 3000);
-app.listen(port, () => console.log(`ENikah site on :${port}`));
+app.listen(port, () => { console.log(`ENikah site on :${port}`); if (E.DEV_MODE !== '1') setTimeout(pingIndexNow, 15000); });
 setInterval(() => runReminders().catch(e => console.error('[cron]', e)), 60 * 60 * 1000);
 setTimeout(() => runReminders().catch(e => console.error('[cron]', e)), 60 * 1000);
