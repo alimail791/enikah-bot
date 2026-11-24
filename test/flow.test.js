@@ -168,6 +168,8 @@ try {
   r = await ta.get('/lang/ta');
   ok(r.status === 303 && ta.jar.lang === 'ta', 'language switch remembers Tamil');
   r = await ta.get('/');
+  ok(r.status === 302 && r.loc === '/ta', 'Tamil choice opens the Tamil URL');
+  r = await ta.get('/ta');
   ok(/குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை/.test(r.body) && /lang="ta"/.test(r.body) && />English</.test(r.body), 'home page in Tamil with an English switch');
   r = await ta.post('/register', { phone: '123', password: 'secret12' });
   ok(/சரியான 10 இலக்க இந்திய மொபைல் எண்ணை/.test(r.body), 'form errors in Tamil');
@@ -176,7 +178,19 @@ try {
   r = await ta.get(r.loc + '?msg=' + encodeURIComponent(r.msg));
   ok(/பதிவு செய்யப்பட்டது! 30 நாட்கள் இலவசம்/.test(r.body) && /ஸலாம், Fathima/.test(r.body) && /சரிபார்க்கப்படவில்லை/.test(r.body), 'dashboard and messages in Tamil');
   r = await new Browser().req('/', { headers: { 'accept-language': 'ta-IN,ta;q=0.9' } });
-  ok(/குடும்பங்களுக்கான/.test(r.body), 'Tamil phones get Tamil by default');
+  ok(r.status === 302 && r.loc === '/ta', 'Tamil phones get Tamil by default');
+  console.log('Search engines');
+  const bot = new Browser();
+  r = await bot.get('/');
+  ok(/<link rel="canonical" href="[^"]+\/">/.test(r.body) && /hreflang="ta" href="[^"]+\/ta"/.test(r.body) && /og:image/.test(r.body) && /"FAQPage"/.test(r.body), 'home has canonical, hreflang, OG and FAQ markup');
+  r = await bot.get('/ta/tamil-muslim-matrimony');
+  ok(r.status === 200 && /lang="ta"/.test(r.body) && /தமிழ் முஸ்லிம் மேட்ரிமோனி/.test(r.body) && /canonical" href="[^"]+\/ta\/tamil-muslim-matrimony"/.test(r.body), 'Tamil content page has its own URL');
+  for (const p of ['/muslim-second-marriage', '/sunni-muslim-matrimony', '/marriage-broker', '/safe-verified-matrimony', '/ta/terms']) ok((await bot.get(p)).status === 200, p + ' loads');
+  r = await bot.get('/sitemap.xml');
+  ok((r.body.match(/<loc>/g) || []).length === 16 && /\/ta\/marriage-broker/.test(r.body), 'sitemap lists English and Tamil pages');
+  ok(/Disallow: \/admin/.test((await bot.get('/robots.txt')).body), 'robots.txt blocks private pages');
+  ok(/noindex/.test((await bot.get('/login')).body), 'login is noindex');
+  ok((await bot.get('/og.png')).status === 200, 'share image');
   ok(/Verified Muslim matrimony for families/.test((await new Browser().get('/')).body), 'English stays the default otherwise');
 
   console.log('\nAll tests passed');
