@@ -10,10 +10,11 @@ const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_
 await new Promise((r, j) => { srv.stdout.on('data', d => String(d).includes('ENikah site on') && r()); srv.on('exit', () => j(new Error('server exited'))); });
 
 class Browser {
-  cookie = '';
+  jar = {};
+  get cookie() { return Object.entries(this.jar).map(([k, v]) => k + '=' + v).join('; '); }
   async req(path, opts = {}) {
     const r = await fetch(B + path, { redirect: 'manual', ...opts, headers: { ...(opts.headers || {}), cookie: this.cookie } });
-    const sc = r.headers.get('set-cookie'); if (sc) this.cookie = sc.split(';')[0];
+    for (const sc of r.headers.getSetCookie()) { const [kv] = sc.split(';'); const i = kv.indexOf('='); this.jar[kv.slice(0, i)] = kv.slice(i + 1); }
     const loc = r.headers.get('location');
     const msg = loc && new URL(loc, B).searchParams.get('msg');
     return { status: r.status, loc: loc && loc.split('?')[0], msg, body: await r.text() };
@@ -161,6 +162,22 @@ try {
   r = await bride.post('/account/delete', { confirm: 'DELETE' });
   ok(/deleted/.test(r.msg) && (await db.query(`select count(*) from users where phone='919111111111'`)).rows[0].count === '0', 'member deletes account and data');
   ok((await new Browser().get('/')).status === 200 && (await new Browser().get('/privacy')).status === 200, 'public pages load');
+
+  console.log('Tamil');
+  const ta = new Browser();
+  r = await ta.get('/lang/ta');
+  ok(r.status === 303 && ta.jar.lang === 'ta', 'language switch remembers Tamil');
+  r = await ta.get('/');
+  ok(/குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை/.test(r.body) && /lang="ta"/.test(r.body) && />English</.test(r.body), 'home page in Tamil with an English switch');
+  r = await ta.post('/register', { phone: '123', password: 'secret12' });
+  ok(/சரியான 10 இலக்க இந்திய மொபைல் எண்ணை/.test(r.body), 'form errors in Tamil');
+  await ta.post('/register', { phone: '9444444444', password: 'secret12', kind: 'person' });
+  r = await ta.post('/profile/new', P('Fathima', 'F', '23', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'Teacher', '', '', 'any'));
+  r = await ta.get(r.loc + '?msg=' + encodeURIComponent(r.msg));
+  ok(/பதிவு செய்யப்பட்டது! 30 நாட்கள் இலவசம்/.test(r.body) && /ஸலாம், Fathima/.test(r.body) && /சரிபார்க்கப்படவில்லை/.test(r.body), 'dashboard and messages in Tamil');
+  r = await new Browser().req('/', { headers: { 'accept-language': 'ta-IN,ta;q=0.9' } });
+  ok(/குடும்பங்களுக்கான/.test(r.body), 'Tamil phones get Tamil by default');
+  ok(/Verified Muslim matrimony for families/.test((await new Browser().get('/')).body), 'English stays the default otherwise');
 
   console.log('\nAll tests passed');
 } finally { srv.kill(); await db.end(); }
