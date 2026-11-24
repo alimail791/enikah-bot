@@ -9,6 +9,7 @@ const auth = () => 'Basic ' + Buffer.from(`${E.RAZORPAY_KEY_ID}:${E.RAZORPAY_KEY
 export async function createLink(phone, kind, amount) {
   const row = await one('insert into payments(phone,kind,amount) values($1,$2,$3) returning id', [phone, kind, amount]);
   if (!E.RAZORPAY_KEY_ID) {
+    if (E.DEV_MODE !== '1') throw new Error('Razorpay keys are not set');
     const id = 'dev_' + row.id;
     await q('update payments set link_id=$1 where id=$2', [id, row.id]);
     return `${CFG.base}/dev/pay/${id}`;

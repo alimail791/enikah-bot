@@ -1,35 +1,25 @@
-# ENikah — Muslim matrimony WhatsApp bot
+# ENikah — verified Muslim matrimony (website)
 
-enikah.vasulbook.com · Node.js + PostgreSQL · WhatsApp Cloud API · Razorpay payment links · Railway
+enikah.vasulbook.com · Node.js + PostgreSQL · Razorpay payment links · Resend email · Railway
 
-## Rules built in
-- Registration free, first 30 days free.
-- Renewal: bride/groom ₹2,000 / 30 days, broker ₹1,000 / 30 days (up to 10 candidates). Renewal extends from the current end date.
-- Only verified profiles with an active plan are shown; not renewed = hidden at once. Broker candidates follow the broker's plan.
-- Only verified users can see profiles. 5 profiles per plan month, matched both ways (asker's age range + maslak choice, and the other person's choice must fit the asker). Same city first.
-- Profiles are viewed on a secure web page (WhatsApp policy forbids forwarding one customer's info to another inside chat). Name/photo hidden until both accept; then contacts are shared.
-- ID + photo uploaded on the web page; admin approves in WhatsApp; ID image deleted after the decision.
-- Reminders 3 days before and on expiry. Report (`report ENK1234 reason`), admin block (`block ENK1234`), and `delete` to erase your data.
+## What members can do
+- **Register** with mobile number + password (email optional, for alerts and password reset). Bride/groom (self or family) or marriage broker.
+- **Free first 30 days**, then ₹2,000 / 30 days (brides & grooms) or ₹1,000 / 30 days (brokers, up to 10 candidates). Renewing adds 30 days to the current end date.
+- **Verification:** upload ID + photo; admin approves on the admin page; ID image is deleted after the decision.
+- **Matches:** 5 verified, active profiles per plan month, matched both ways (age range + maslak), same city first. Earlier matches stay listed.
+- **Privacy:** cards show no name, phone or photo. When an interest is accepted, both sides see name, phone (call / WhatsApp link) and photo.
+- **Expiry:** profiles not renewed are hidden at once; broker candidates follow the broker's plan. Reminders 3 days before and on expiry (on the site + email).
+- Report a profile, edit profile, change password, delete account.
+
+## Admin (log in with an ADMIN_PHONES number)
+Stats, pending verifications with documents, approve/reject, reports, block/unblock, find by ENK number, and "Add 30 days" for cash payments.
 
 ## Setup
-1. **New WhatsApp number** for ENikah only (don't reuse EMart/EDeal/Raise Academy — matrimony is close to WhatsApp's banned "dating services" category).
-2. Meta app → WhatsApp → add the number. Webhook URL `BASE_URL/webhook`, verify token = `WA_VERIFY_TOKEN`, subscribe to `messages`.
-3. Railway: this repo + a Postgres database. Set variables from `.env.example` (`DATABASE_URL=${{Postgres.DATABASE_URL}}`).
-4. Custom domain `enikah.vasulbook.com` → CNAME to the Railway domain.
-5. Razorpay → Webhooks → `BASE_URL/rzp/webhook`, event `payment_link.paid`, secret = `RAZORPAY_WEBHOOK_SECRET`.
-6. Create these **Utility** message templates in WhatsApp Manager (language English). They are used only when the person hasn't messaged in 24 hours:
-
-| Name | Body |
-|---|---|
-| enikah_reminder | Assalamu alaikum {{1}}, your ENikah plan ends on {{2}}. Reply RENEW to get your payment link and stay visible. |
-| enikah_expired | {{1}}, your ENikah plan ended on {{2}} and {{3}} is now hidden from search. Reply RENEW to show it again. |
-| enikah_interest | You have a new interest for profile {{1}} on ENikah. Reply INTERESTS to view and respond. |
-| enikah_accepted | Good news: {{1}} accepted your interest on ENikah. Reply INTERESTS to see the contact details. |
-| enikah_verified | ENikah verification for {{1}}: {{2}}. Reply MENU to continue. |
-| enikah_paid | Payment of {{1}} received. Your ENikah plan is active till {{2}}. |
-| enikah_admin | ENikah admin alert: {{1}}. Reply MENU to open the admin menu. |
-
-Admins should message the bot at least once a day so alerts arrive as full messages with Approve/Reject buttons.
+1. Railway: this repo + Postgres. Variables from `.env.example` (`DATABASE_URL=${{Postgres.DATABASE_URL}}`).
+2. DNS: `enikah` CNAME to the Railway target, plus the `_railway-verify` TXT record.
+3. Register on the site with the admin number first — it opens the admin panel.
+4. Razorpay: add keys; webhook `BASE_URL/rzp/webhook`, event `payment_link.paid`, secret = `RAZORPAY_WEBHOOK_SECRET`.
+5. Optional email: Resend API key + verified sender domain (`MAIL_FROM`).
 
 ## Test
-`DATABASE_URL=... npm test` runs the full flow (registration, verification, two-way matching, monthly limit, interests, renewal, expiry, reminders, templates, broker, admin, delete).
+`DATABASE_URL=... npm test` — 46 end-to-end checks (accounts, verification, two-way matching, monthly limit, interests, contacts, photos, renewal, expiry, reminders, broker, admin, delete).

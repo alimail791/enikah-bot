@@ -12,7 +12,7 @@ export const all = async (t, p) => (await pool.query(t, p)).rows;
 const SCHEMA = `
 create table if not exists users(
   phone text primary key,
-  type text,                         -- null | person | broker | admin
+  type text,                         -- null | person | broker | admin (website accounts)
   name text, city text,
   status text default 'unverified',  -- broker ID verification
   exp timestamptz,                   -- broker plan end
@@ -53,6 +53,14 @@ create table if not exists docs(
 create table if not exists payments(
   id serial primary key, phone text, kind text, amount int, link_id text unique,
   status text default 'created', created timestamptz default now(), paid_at timestamptz);
+
+create table if not exists notes(
+  id serial primary key, phone text, text text, link text, seen boolean default false,
+  created timestamptz default now());
+create index if not exists notes_phone on notes(phone, id desc);
+
+alter table users add column if not exists pw text;
+alter table users add column if not exists email text;
 
 create table if not exists reports(
   id serial primary key, phone text, pid int, reason text, created timestamptz default now());

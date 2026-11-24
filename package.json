@@ -1,7 +1,7 @@
 {
   "name": "enikah-bot",
   "version": "1.0.0",
-  "description": "ENikah - Muslim matrimony WhatsApp bot (enikah.vasulbook.com)",
+  "description": "ENikah - verified Muslim matrimony website (enikah.vasulbook.com)",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
