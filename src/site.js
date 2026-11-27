@@ -21,6 +21,7 @@ const go = (res, path, msg) => {
   res.redirect(303, p + (msg ? (p.includes('?') ? '&' : '?') + 'msg=' + encodeURIComponent(msg) : '') + (hash ? '#' + hash : ''));
 };
 const CONTACT = () => process.env.CONTACT_EMAIL || 'alimail791@gmail.com';
+const HELP = () => String(process.env.HELP_WHATSAPP || '').replace(/\D/g, '');
 
 // ---------- look ----------
 const CSS = `:root{color-scheme:light dark;--bg:light-dark(#f6f1e7,#0f1714);--ink:light-dark(#1d2421,#e9efe9);--mut:light-dark(#5d6762,#9aa7a0);--card:light-dark(#fff,#18221e);--line:light-dark(#e3dccd,#2a3832);--em:#0b4d3c;--em2:light-dark(#0b4d3c,#6fd0ac);--gold:#c9a24a;--red:light-dark(#b3361f,#ff8a73);--ok:light-dark(#1d7a4f,#6fd0ac)}
@@ -68,8 +69,9 @@ function page(req, title, body, opts = {}) {
 ${opts.head || '<meta name="robots" content="noindex">'}<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b4d3c'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23f3dfa8' font-family='Georgia'%3EE%3C/text%3E%3C/svg%3E">
 ${req.lang === 'ta' ? '<link rel="preconnect" href="https://fonts.gstatic.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600&family=Noto+Serif+Tamil&display=swap" rel="stylesheet">' : ''}<style>${CSS}${SEO_CSS}</style></head>
 <body><header class="top"><a class="brand" href="${urlFor(req.lang, '/')}">ENikah</a><nav>${nav}${other}</nav></header><main>${m}${body}</main>
-<footer>${t('ENikah · Verified profiles only · Contacts shared only when both sides accept')}<br><a href="${urlFor(req.lang, '/privacy')}">${t('Privacy')}</a> · <a href="${urlFor(req.lang, '/terms')}">${t('Terms')}</a></footer></body></html>`;
+<footer>${t('ENikah · Verified profiles only · Contacts shared only when both sides accept')}<br>${HELP() ? `${t('Help on WhatsApp')}: <a href="https://wa.me/${HELP()}">+${HELP().replace(/^91/, '91 ')}</a><br>` : ''}<a href="${urlFor(req.lang, '/privacy')}">${t('Privacy')}</a> · <a href="${urlFor(req.lang, '/terms')}">${t('Terms')}</a></footer></body></html>`;
 }
+const helpLine = t => HELP() ? `<p class="note">${t('Need help? WhatsApp us')}: <a href="https://wa.me/${HELP()}?text=${encodeURIComponent('ENikah help')}">+${HELP()}</a></p>` : '';
 const errBox = (t, e) => e ? `<div class="err">${esc(t(e))}</div>` : '';
 const opt = (t, list, v) => list.map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(t(x))}</option>`).join('');
 const sideT = (t, p) => t(p.g === 'F' ? 'Bride' : 'Groom');
@@ -169,7 +171,7 @@ export function mount(app) {
       <label>${t('Password')} <small>${t('At least 6 characters')}</small><input name="password" type="password" autocomplete="new-password" required minlength="6"></label>
       <label>${t('Email')} <small>${t('We send a code to check it. Used for alerts and password reset.')}</small><input name="email" type="email" autocomplete="email" value="${esc(b.email)}" required></label>
       <label>${t('I am registering as')}<select name="kind"><option value="person">${t('Bride / groom (myself or family)')}</option><option value="broker" ${b.kind === 'broker' ? 'selected' : ''}>${t('Marriage broker')}</option></select></label>
-      <button>${t('Create account')}</button><p class="note">${t('Already registered?')} <a href="/login">${t('Log in')}</a></p></form>`); };
+      <button>${t('Create account')}</button><p class="note">${t('Already registered?')} <a href="/login">${t('Log in')}</a></p>${helpLine(t)}</form>`); };
   app.get('/register', (req, res) => req.user ? go(res, '/home') : res.send(regForm(req)));
   app.post('/register', h(async (req, res) => {
     if (limited('reg:' + req.ip, 40)) return res.status(429).send(regForm(req, 'Too many attempts. Please try again in 15 minutes.', req.body));
@@ -181,7 +183,7 @@ export function mount(app) {
 
   const loginForm = (req, e) => { const t = req.t; return page(req, t('Log in'), `<h1>${t('Log in')}</h1>${errBox(t, e)}<form class="fl box" method="post" action="/login${req.query.next ? '?next=' + encodeURIComponent(req.query.next) : ''}">
     <label>${t('Mobile number or email')}<input name="phone" autocomplete="username" required></label><label>${t('Password')}<input name="password" type="password" autocomplete="current-password" required></label>
-    <button>${t('Log in')}</button><div class="acts"><a class="btn alt" href="/forgot">${t('Forgot password?')}</a><a class="btn alt" href="/register">${t('New here? Register free')}</a></div></form>`); };
+    <button>${t('Log in')}</button><div class="acts"><a class="btn alt" href="/forgot">${t('Forgot password?')}</a><a class="btn alt" href="/register">${t('New here? Register free')}</a></div>${helpLine(t)}</form>`); };
   app.get('/login', (req, res) => req.user ? go(res, '/home') : res.send(loginForm(req)));
   app.post('/login', h(async (req, res) => {
     if (limited('login:' + req.ip, 20) || limited('login:' + String(req.body.phone || '').trim().toLowerCase())) return res.status(429).send(loginForm(req, 'Too many attempts. Please try again in 15 minutes.'));
@@ -457,7 +459,7 @@ export function mount(app) {
         <div style="max-width:240px;background:#fff;padding:8px;border-radius:12px">${qr}</div>
         <p>${t('UPI ID')}: <b>${esc(UPI())}</b></p><div class="acts"><a class="btn" href="${esc(upiUrl)}">${t('Open UPI app')}</a></div>
         <form class="fl" method="post" action="/renew/upi" style="margin-top:16px"><label>${t('After paying, enter the UPI transaction ID (UTR)')} <small>${t('12-digit number shown in your UPI app after payment')}</small><input name="utr" inputmode="numeric" required maxlength="22"></label><button>${t('Submit payment details')}</button></form></div>` : ''}
-      <div class="box"><h2 style="margin-top:0">${t(UPI() ? 'Or pay online with Razorpay' : 'Pay online with Razorpay')}</h2><p class="note">${t('Card, net banking, wallets or UPI. Your plan is extended automatically.')}</p><form method="post" action="/renew"><button class="gold">${t('Pay {price} with Razorpay', { price: rs(amt) })}</button></form></div>`));
+      <div class="box"><h2 style="margin-top:0">${t(UPI() ? 'Or pay online with Razorpay' : 'Pay online with Razorpay')}</h2><p class="note">${t('Card, net banking, wallets or UPI. Your plan is extended automatically.')}</p><form method="post" action="/renew"><button class="gold">${t('Pay {price} with Razorpay', { price: rs(amt) })}</button></form></div>${helpLine(t)}`));
   }));
   app.post('/renew/upi', need('person', 'broker'), h(async (req, res) => {
     if (!UPI()) return go(res, '/renew');

@@ -4,6 +4,7 @@ import { q, one, all, getP, P_SQL, visible } from './db.js';
 import { CFG, ADMINS, isAdmin, rs, D, card } from './config.js';
 import { sendMail } from './mail.js';
 import { makeT } from './i18n.js';
+import * as wa from './wa.js';
 const ta = makeT('ta');
 
 const E = process.env;
@@ -38,9 +39,11 @@ export async function newToken(kind, phone, ref, data, hours) {
 export const getToken = (t, kind) => one('select * from tokens where token=$1 and kind=$2 and expires>now()', [String(t || ''), kind]);
 
 // In-site notification + email if the person gave one.
-export async function notify(phone, text, link) {
+// wa = [template name, params] sends the same news on WhatsApp too (when WhatsApp sending is on).
+export async function notify(phone, text, link, waMsg) {
   await q('insert into notes(phone,text,link) values($1,$2,$3)', [phone, text, link || null]);
   const u = await user(phone);
+  if (waMsg) await wa.sendTemplate(phone, waMsg[0], typeof waMsg[1] === 'function' ? waMsg[1](u?.lang) : waMsg[1], u?.lang).catch(e => console.error('[wa]', e));
   if (u?.email && u.email_ok !== false) await sendMail(u.email, 'ENikah: ' + text.split('\n')[0].slice(0, 90), bilingual(text, link)).catch(e => console.error('[mail]', e));
 }
 export async function notifyAdmins(text, link) {
@@ -110,17 +113,12 @@ export async function checkEmailCode(phone, code) {
 }
 
 // Phone codes go by WhatsApp (an approved "authentication" template), only when PHONE_OTP_TEMPLATE is set.
-export const phoneOtpOn = () => !!(E.PHONE_OTP_TEMPLATE && E.WA_TOKEN && E.WA_PHONE_ID);
+export const phoneOtpOn = () => !!(E.PHONE_OTP_TEMPLATE && E.WA_SEND === '1' && E.WA_TOKEN && E.WA_PHONE_ID && E.WA_NUMBER);
 export async function sendPhoneCode(phone) {
   const code = code6();
   await q(`delete from tokens where phone=$1 and kind='phonecode'`, [phone]);
   await newToken('phonecode', phone, phone, { code, tries: 0 }, 0.25);
-  if (E.DRY_RUN === '1') return;
-  const r = await fetch(`https://graph.facebook.com/${E.WA_API_VERSION || 'v21.0'}/${E.WA_PHONE_ID}/messages`, {
-    method: 'POST', headers: { Authorization: `Bearer ${E.WA_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name: E.PHONE_OTP_TEMPLATE, language: { code: E.PHONE_OTP_LANG || 'en' },
-      components: [{ type: 'body', parameters: [{ type: 'text', text: code }] }, { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: code }] }] } }) });
-  if (!r.ok) { console.error('[wa otp]', r.status, await r.text()); return 'Could not send the WhatsApp code. Please try again later.'; }
+  if (!(await wa.sendCode(phone, code))) return 'Could not send the WhatsApp code. Please try again later.';
 }
 export async function checkPhoneCode(phone, code) {
   const tk = await one(`select * from tokens where phone=$1 and kind='phonecode' and expires>now() order by expires desc limit 1`, [phone]);
@@ -206,19 +204,22 @@ export async function submitDocs(phone, target, idf, photo) {
   await notifyAdmins(`New verification request: ${desc}`, '/admin');
 }
 
+const verWord = (ok, l) => ok ? (l === 'ta' ? 'அங்கீகரிக்கப்பட்டது' : 'approved') : (l === 'ta' ? 'ஏற்கப்படவில்லை, மீண்டும் பதிவேற்றவும்' : 'not approved, please upload again');
 export async function decide(kind, ref, ok) {
   if (kind === 'b') {
     const u = await one(`update users set status=$2 where phone=$1 and status='pending' returning *`, [ref, ok ? 'verified' : 'unverified']);
     if (!u) return 'Already handled.';
     await q(`delete from docs where kind='b' and ref=$1`, [ref]);
-    await notify(ref, ok ? 'Your broker ID is verified. You can now add and verify candidates.' : 'Your broker verification was not approved. Please upload a clear ID again.', ok ? '/broker' : '/verify/b');
+    await notify(ref, ok ? 'Your broker ID is verified. You can now add and verify candidates.' : 'Your broker verification was not approved. Please upload a clear ID again.', ok ? '/broker' : '/verify/b',
+      ['enikah_newverified', l => [l === 'ta' ? 'தரகர் கணக்கு' : 'broker account', verWord(ok, l)]]);
     return `Broker ${plus(ref)} ${ok ? 'approved' : 'rejected'}.`;
   }
   const p = await one(`update profiles set status=$2 where id=$1 and status='pending' returning *, 'ENK'||id as code`, [+ref, ok ? 'verified' : 'unverified']);
   if (!p) return 'Already handled.';
   if (ok) await q(`update profiles set (photo,photo_mime)=(select photo,photo_mime from docs where kind='p' and ref=$1 order by id desc limit 1) where id=$2`, [String(+ref), +ref]);
   await q(`delete from docs where kind='p' and ref=$1`, [String(+ref)]);
-  await notify(p.broker || p.owner, ok ? `${p.code} is verified! You can now see verified matching profiles.` : `Verification of ${p.code} was not approved. Please upload a clear ID and photo again.`, ok ? `/matches/${p.id}` : `/verify/${p.id}`);
+  await notify(p.broker || p.owner, ok ? `${p.code} is verified! You can now see verified matching profiles.` : `Verification of ${p.code} was not approved. Please upload a clear ID and photo again.`, ok ? `/matches/${p.id}` : `/verify/${p.id}`,
+    ['enikah_newverified', l => [p.code, verWord(ok, l)]]);
   return `${p.code} ${ok ? 'approved' : 'rejected'}.`;
 }
 
@@ -273,7 +274,7 @@ export async function sendInterest(phone, fromId, toId) {
   if (!visible(t)) return 'This profile is no longer available (not renewed).';
   const x = await one('insert into interests(from_id,to_id) values($1,$2) on conflict do nothing returning id', [fromId, toId]);
   if (!x) return 'Interest already sent.';
-  await notify(t.broker || t.owner, `New interest for ${t.code}${t.broker ? ' (' + t.name + ')' : ''} from ${f.code} (${card(f).replace('\n', ' · ')}). Accept to share contact details.`, '/interests');
+  await notify(t.broker || t.owner, `New interest for ${t.code}${t.broker ? ' (' + t.name + ')' : ''} from ${f.code} (${card(f).replace('\n', ' · ')}). Accept to share contact details.`, '/interests', ['enikah_interest', [t.code]]);
   return `Interest sent to ${t.code}. You will be notified when they reply.`;
 }
 
@@ -287,7 +288,7 @@ export async function answer(phone, iid, ok) {
   await q('update interests set st=$2 where id=$1', [iid, ok ? 'accepted' : 'declined']);
   if (!ok) { await notify(f.broker || f.owner, `${t.code} has declined the interest from ${f.code}. Keep making du'a — more matches will come.`, '/interests'); return 'Declined. Your details were not shared.'; }
   const c = await contact(t);
-  await notify(f.broker || f.owner, `${t.code} accepted the interest from ${f.code}! Contact: ${c.who}, ${c.phone}. Please involve family / wali.`, '/interests');
+  await notify(f.broker || f.owner, `${t.code} accepted the interest from ${f.code}! Contact: ${c.who}, ${c.phone}. Please involve family / wali.`, '/interests', ['enikah_accepted', [t.code]]);
   return 'Accepted. Contact details are now shown to both sides under Interests.';
 }
 
@@ -303,7 +304,7 @@ export async function onPaid(pay) {
   let exp;
   if (pay.kind === 'broker') exp = (await one(`update users set exp=${EXP(30)},rem3=null,rem0=null where phone=$1 returning exp`, [pay.phone])).exp;
   else exp = (await one(`update profiles set exp=${EXP(30)},rem3=null,rem0=null where id=$1 returning exp`, [u.pid])).exp;
-  await notify(pay.phone, `Payment received: ${rs(pay.amount)}. Your plan is active till ${D(exp)}.${pay.kind === 'broker' ? ' All your candidates are visible again.' : ` You get ${CFG.monthly} new matching profiles this month.`}`, '/home');
+  await notify(pay.phone, `Payment received: ${rs(pay.amount)}. Your plan is active till ${D(exp)}.${pay.kind === 'broker' ? ' All your candidates are visible again.' : ` You get ${CFG.monthly} new matching profiles this month.`}`, '/home', ['enikah_paid', [rs(pay.amount), D(exp)]]);
   await notifyAdmins(`Payment ${rs(pay.amount)} received from ${u.name || plus(pay.phone)} (${pay.kind}).`);
 }
 
@@ -342,19 +343,19 @@ export async function deleteAccount(phone) {
 // ---------- reminders (hourly) ----------
 export async function runReminders() {
   for (const p of await all(`select p.*, 'ENK'||p.id code from profiles p where owner is not null and exp>now() and exp<=now()+interval '3 days' and rem3 is distinct from exp and status<>'blocked'`)) {
-    await notify(p.owner, `Reminder: your ENikah plan ends on ${D(p.exp)}. Renew ${rs(CFG.person)} to stay visible.`, '/home');
+    await notify(p.owner, `Reminder: your ENikah plan ends on ${D(p.exp)}. Renew ${rs(CFG.person)} to stay visible.`, '/home', ['enikah_reminder', [p.name.split(' ')[0], D(p.exp)]]);
     await q('update profiles set rem3=exp where id=$1', [p.id]);
   }
   for (const p of await all(`select p.*, 'ENK'||p.id code from profiles p where owner is not null and exp<=now() and rem0 is distinct from exp and status<>'blocked'`)) {
-    await notify(p.owner, `Your plan has ended. Profile ${p.code} is now hidden from search. Renew ${rs(CFG.person)} to show it again.`, '/home');
+    await notify(p.owner, `Your plan has ended. Profile ${p.code} is now hidden from search. Renew ${rs(CFG.person)} to show it again.`, '/home', ['enikah_expired', [p.name.split(' ')[0], D(p.exp), p.code]]);
     await q('update profiles set rem0=exp where id=$1', [p.id]);
   }
   for (const b of await all(`select * from users where type='broker' and exp>now() and exp<=now()+interval '3 days' and rem3 is distinct from exp`)) {
-    await notify(b.phone, `Reminder: your broker plan ends on ${D(b.exp)}. Renew ${rs(CFG.broker)} to keep your candidates visible.`, '/broker');
+    await notify(b.phone, `Reminder: your broker plan ends on ${D(b.exp)}. Renew ${rs(CFG.broker)} to keep your candidates visible.`, '/broker', ['enikah_reminder', [b.name, D(b.exp)]]);
     await q('update users set rem3=exp where phone=$1', [b.phone]);
   }
   for (const b of await all(`select * from users where type='broker' and exp<=now() and rem0 is distinct from exp`)) {
-    await notify(b.phone, `Your broker plan has ended. All your candidates are hidden. Renew ${rs(CFG.broker)} to show them again.`, '/broker');
+    await notify(b.phone, `Your broker plan has ended. All your candidates are hidden. Renew ${rs(CFG.broker)} to show them again.`, '/broker', ['enikah_expired', l => [b.name, D(b.exp), l === 'ta' ? 'உங்கள் வரன்கள்' : 'your candidates']]);
     await q('update users set rem0=exp where phone=$1', [b.phone]);
   }
   await q('delete from tokens where expires < now()');

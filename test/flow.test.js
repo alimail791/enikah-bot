@@ -6,7 +6,7 @@ import pg from 'pg';
 const PORT = 3999, B = `http://localhost:${PORT}`, ADMIN = '9000000000';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 await db.query('drop schema public cascade; create schema public;');
-const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', UPI_ID: 'test@oksbi', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
+const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', UPI_ID: 'test@oksbi', HELP_WHATSAPP: '919443424064', WA_SEND: '1', WA_TOKEN: 't', WA_PHONE_ID: 'p', WA_NUMBER: '9443424064', DRY_RUN: '1', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r, j) => { srv.stdout.on('data', d => String(d).includes('ENikah site on') && r()); srv.on('exit', () => j(new Error('server exited'))); });
 
 class Browser {
@@ -242,6 +242,12 @@ try {
   ok((await db.query(`select source from users where phone='919666666666'`)).rows[0].source === 'yneet', 'sign-up remembers it came from yneet');
   r = await admin.get('/admin');
   ok(/<td>yneet<\/td><td>1<\/td><td>1<\/td>/.test(r.body), 'traffic report shows yneet visitors and sign-ups');
+
+  const wam = await (await fetch(B + '/dev/wa')).json();
+  ok(wam.some(m => m.to === '919222222221' && m.template.name === 'enikah_interest' && m.template.components[0].parameters[0].text === 'ENK1002'), 'interest also sent as WhatsApp template');
+  ok(wam.some(m => m.template.name === 'enikah_newverified' && m.template.language.code === 'en'), 'verified message sent on WhatsApp');
+  ok(wam.some(m => m.template.name === 'enikah_paid'), 'payment confirmation sent on WhatsApp');
+  ok(/wa\.me\/919443424064/.test((await new Browser().get('/login')).body), 'help WhatsApp number shown');
 
   console.log('Tamil');
   const ta = new Browser();

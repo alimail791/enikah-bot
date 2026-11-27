@@ -185,6 +185,7 @@ const TA = {
   'Email not verified': 'மின்னஞ்சல் சரிபார்க்கப்படவில்லை', 'No profile yet': 'சுயவிவரம் இன்னும் இல்லை', 'No ID / photo yet': 'அடையாள ஆவணம் / புகைப்படம் இன்னும் இல்லை',
   '{n} h ago': '{n} மணி நேரம் முன்', '{n} days ago': '{n} நாட்கள் முன்',
 
+  'Help on WhatsApp': 'WhatsApp உதவி', 'Need help? WhatsApp us': 'உதவி வேண்டுமா? WhatsApp-இல் தொடர்பு கொள்ளுங்கள்',
   // fixed messages (flash / errors / notifications)
   'Too many attempts. Please try again in 15 minutes.': 'அதிக முயற்சிகள். 15 நிமிடங்கள் கழித்து மீண்டும் முயலவும்.',
   'Wrong mobile number or password.': 'மொபைல் எண் அல்லது கடவுச்சொல் தவறு.',

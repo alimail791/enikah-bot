@@ -31,6 +31,7 @@ if (E.DEV_MODE === '1') {
   app.get('/dev/pay/:id', async (req, res) => { const p = await markPaid(req.params.id); if (p) await onPaid(p); res.redirect(303, '/home?msg=' + encodeURIComponent(p ? 'Paid (dev).' : 'Already paid.')); });
   app.post('/dev/reminders', async (req, res) => { await runReminders(); res.json({ ok: true }); });
   app.post('/dev/followups', async (req, res) => { await runFollowups(); res.json({ ok: true }); });
+  app.get('/dev/wa', async (req, res) => { const { outbox } = await import('./wa.js'); res.json(outbox.splice(0)); });
   app.get('/dev/mail', async (req, res) => { const { sentMail } = await import('./mail.js'); res.json(sentMail.splice(0)); });
 }
 
