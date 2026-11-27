@@ -8,7 +8,7 @@ import { CFG, esc, rs } from './config.js';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const OG = fs.readFileSync(path.join(DIR, 'og.png'));
-const UPDATED = '2026-11-24';
+const UPDATED = '2026-11-28';
 
 // Public URL for a page in a language. p is the English path ("/", "/terms").
 export const urlFor = (lang, p) => lang === 'ta' ? (p === '/' ? '/ta' : '/ta' + p) : p;
@@ -41,19 +41,19 @@ const faqHtml = (title, qa) => `<h2>${esc(title)}</h2>${qa.map(([q, a]) => `<det
 const HOME = {
   en: {
     title: 'ENikah: Verified Muslim Matrimony for Tamil Nadu Families',
-    desc: 'Free Muslim matrimony registration with the first 3 months free. ID-verified brides and grooms, two-way maslak and age matching, contacts shared only when both families accept. English & Tamil.',
+    desc: 'Free Muslim matrimony registration with the first 3 months free. ID-verified brides and grooms, two-way age and city matching, contacts shared only when both families accept. English & Tamil.',
     whyH: 'Why families choose ENikah',
     why: [
       ['Every profile is ID-verified', 'Our admin checks an ID and a photo before a profile is shown. The ID is deleted after checking.'],
       ['Privacy first', 'Names, phone numbers and photos stay hidden. They are shared only when both sides accept an interest.'],
-      ['Two-way matching', 'You see a profile only if it fits your age and maslak choice and you fit theirs. No endless scrolling.'],
+      ['Two-way matching', 'You see a profile only if it fits your age choice and you fit theirs. No endless scrolling.'],
       ['Family and wali involved', 'ENikah is built for families. Register for a son, daughter, brother or sister, and talk with the wali present.'],
     ],
     forH: 'Find the right match', faqH: 'Questions families ask',
     faq: [
       ['Is registration free?', 'Yes. Registration is free and the first 3 months are free. After that it is {person} per 30 days for brides and grooms.'],
       ['Who can register?', 'Muslim brides aged 18 and above and grooms aged 21 and above who are seeking marriage. Parents or family members can register on their behalf with consent.'],
-      ['How many matches will I get?', 'Up to {monthly} verified matching profiles every month, matched both ways on age and maslak, from your own city first.'],
+      ['How many matches will I get?', 'Up to {monthly} verified matching profiles every month, matched both ways on age, from your own city first.'],
       ['When are contact details shared?', 'Only when both sides accept an interest. Until then your name, number and photo stay hidden.'],
       ['Is ENikah available in Tamil?', 'Yes. The whole site, messages and notifications are available in Tamil and English.'],
       ['Can marriage brokers use ENikah?', 'Yes. Verified brokers can list up to {cap} candidates for {broker} per 30 days.'],
@@ -61,19 +61,19 @@ const HOME = {
   },
   ta: {
     title: 'ENikah: தமிழ்நாட்டு குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை',
-    desc: 'இலவச முஸ்லிம் மேட்ரிமோனி பதிவு, முதல் 3 மாதங்கள் இலவசம். அடையாளம் சரிபார்க்கப்பட்ட மணமகள், மணமகன்; வயது, மஸ்லக் இரு தரப்புப் பொருத்தம்; இரு குடும்பமும் ஏற்ற பின்பே தொடர்பு விவரங்கள்.',
+    desc: 'இலவச முஸ்லிம் மேட்ரிமோனி பதிவு, முதல் 3 மாதங்கள் இலவசம். அடையாளம் சரிபார்க்கப்பட்ட மணமகள், மணமகன்; வயது இரு தரப்புப் பொருத்தம்; இரு குடும்பமும் ஏற்ற பின்பே தொடர்பு விவரங்கள்.',
     whyH: 'குடும்பங்கள் ENikah-வைத் தேர்வு செய்வது ஏன்',
     why: [
       ['ஒவ்வொரு சுயவிவரமும் சரிபார்க்கப்படுகிறது', 'சுயவிவரம் காட்டப்படும் முன் எங்கள் நிர்வாகி அடையாள ஆவணத்தையும் புகைப்படத்தையும் சரிபார்க்கிறார். சரிபார்த்த பின் அடையாள ஆவணம் நீக்கப்படும்.'],
       ['தனியுரிமைக்கு முதலிடம்', 'பெயர், தொலைபேசி எண், புகைப்படம் மறைக்கப்பட்டிருக்கும். இரு தரப்பும் விருப்பத்தை ஏற்ற பின்பே பகிரப்படும்.'],
-      ['இரு தரப்புப் பொருத்தம்', 'உங்கள் வயது, மஸ்லக் விருப்பத்துக்கு அவர்களும், அவர்களின் விருப்பத்துக்கு நீங்களும் பொருந்தினால் மட்டுமே வரன் காட்டப்படும்.'],
+      ['இரு தரப்புப் பொருத்தம்', 'உங்கள் வயது விருப்பத்துக்கு அவர்களும், அவர்களின் விருப்பத்துக்கு நீங்களும் பொருந்தினால் மட்டுமே வரன் காட்டப்படும்.'],
       ['குடும்பமும் வலீயும் உடன்', 'ENikah குடும்பங்களுக்காக உருவாக்கப்பட்டது. மகன், மகள், சகோதரன், சகோதரிக்காகப் பதிவு செய்யலாம்; வலீயுடன் பேசுங்கள்.'],
     ],
     forH: 'சரியான வரனைத் தேடுங்கள்', faqH: 'குடும்பங்கள் கேட்கும் கேள்விகள்',
     faq: [
       ['பதிவு இலவசமா?', 'ஆம். பதிவு இலவசம், முதல் 3 மாதங்களும் இலவசம். அதன் பின் மணமகள், மணமகனுக்கு 30 நாட்களுக்கு {person}.'],
       ['யார் பதிவு செய்யலாம்?', 'திருமணத்தை நாடும் 18 வயதுக்கு மேற்பட்ட முஸ்லிம் மணமகள்களும் 21 வயதுக்கு மேற்பட்ட மணமகன்களும். அவர்களின் சம்மதத்துடன் பெற்றோர் அல்லது குடும்பத்தினர் பதிவு செய்யலாம்.'],
-      ['எத்தனை வரன்கள் கிடைக்கும்?', 'ஒவ்வொரு மாதமும் {monthly} வரை சரிபார்க்கப்பட்ட பொருத்தமான வரன்கள்; வயது, மஸ்லக் இரு தரப்புக்கும் பொருந்தும்; முதலில் உங்கள் ஊர்.'],
+      ['எத்தனை வரன்கள் கிடைக்கும்?', 'ஒவ்வொரு மாதமும் {monthly} வரை சரிபார்க்கப்பட்ட பொருத்தமான வரன்கள்; வயது இரு தரப்புக்கும் பொருந்தும்; முதலில் உங்கள் ஊர்.'],
       ['தொடர்பு விவரங்கள் எப்போது பகிரப்படும்?', 'இரு தரப்பும் விருப்பத்தை ஏற்ற பின்பே. அதுவரை உங்கள் பெயர், எண், புகைப்படம் மறைக்கப்பட்டிருக்கும்.'],
       ['ENikah தமிழில் கிடைக்குமா?', 'ஆம். முழு இணையதளமும், செய்திகளும், அறிவிப்புகளும் தமிழிலும் ஆங்கிலத்திலும் கிடைக்கும்.'],
       ['திருமணத் தரகர்கள் பயன்படுத்தலாமா?', 'ஆம். சரிபார்க்கப்பட்ட தரகர்கள் 30 நாட்களுக்கு {broker} கட்டணத்தில் {cap} வரன்கள் வரை பதிவிடலாம்.'],
@@ -131,7 +131,7 @@ const PAGES = [
       body: [
         ['Marital status shown honestly', 'Every profile states whether the person has never married, is divorced or is widowed. Families know from the start, and there are no surprises later.'],
         ['Privacy that matters more here', 'Your name, phone number and photo stay hidden until both sides accept an interest. Only verified members can see your profile at all.'],
-        ['Matches that respect your choice', 'Set the partner age range and maslak you want. You see only profiles that fit your choice and whose choice fits you.'],
+        ['Matches that respect your choice', 'Set the partner age range you want. You see only profiles that fit your choice and whose choice fits you.'],
         ['Same price for everyone', 'Free registration and first 3 months, then {person} per 30 days. No extra charge for second-marriage profiles.'],
       ],
       faq: [['Can a parent register for a divorced daughter?', 'Yes, with her consent. Please involve her wali in every conversation.']],
@@ -145,39 +145,10 @@ const PAGES = [
       body: [
         ['திருமண நிலை நேர்மையாக', 'ஒவ்வொரு சுயவிவரமும் திருமணம் ஆகாதவரா, விவாகரத்து ஆனவரா, துணையை இழந்தவரா என்பதைக் காட்டுகிறது. குடும்பங்களுக்குத் தொடக்கத்திலேயே தெரியும்.'],
         ['இங்கே தனியுரிமை இன்னும் முக்கியம்', 'இரு தரப்பும் விருப்பத்தை ஏற்கும் வரை உங்கள் பெயர், எண், புகைப்படம் மறைக்கப்பட்டிருக்கும். சரிபார்க்கப்பட்ட உறுப்பினர்கள் மட்டுமே உங்கள் சுயவிவரத்தைக் காண முடியும்.'],
-        ['உங்கள் விருப்பத்தை மதிக்கும் பொருத்தம்', 'துணையின் வயது வரம்பையும் மஸ்லக்கையும் தேர்வு செய்யுங்கள். உங்கள் விருப்பத்துக்கும் அவர்களின் விருப்பத்துக்கும் பொருந்தும் வரன்கள் மட்டுமே காட்டப்படும்.'],
+        ['உங்கள் விருப்பத்தை மதிக்கும் பொருத்தம்', 'துணையின் வயது வரம்பைத் தேர்வு செய்யுங்கள். உங்கள் விருப்பத்துக்கும் அவர்களின் விருப்பத்துக்கும் பொருந்தும் வரன்கள் மட்டுமே காட்டப்படும்.'],
         ['அனைவருக்கும் ஒரே கட்டணம்', 'இலவசப் பதிவு, முதல் 3 மாதங்கள் இலவசம்; பின் 30 நாட்களுக்கு {person}. மறுமணச் சுயவிவரங்களுக்குக் கூடுதல் கட்டணம் இல்லை.'],
       ],
       faq: [['விவாகரத்து ஆன மகளுக்காகப் பெற்றோர் பதிவு செய்யலாமா?', 'ஆம், அவரின் சம்மதத்துடன். ஒவ்வொரு உரையாடலிலும் அவரின் வலீயை உடன் வைத்துக்கொள்ளுங்கள்.']],
-    },
-  },
-  {
-    path: '/sunni-muslim-matrimony',
-    en: {
-      short: 'Sunni, Shafi & Hanafi matrimony',
-      title: 'Sunni Muslim Matrimony: Shafi and Hanafi Brides and Grooms | ENikah',
-      desc: 'Find Sunni Shafi or Sunni Hanafi brides and grooms. ENikah matches maslak both ways, so you only see families whose choice fits yours. Verified profiles, first 3 months free.',
-      h1: 'Sunni Muslim matrimony with maslak matching',
-      lede: 'For many families the maslak matters. ENikah lets you choose “same maslak only” or “any maslak”, and respects the other family’s choice too.',
-      body: [
-        ['Maslak on every profile', 'Profiles show Sunni Hanafi, Sunni Shafi, Sunni (other), Shia or other, so families can see it upfront.'],
-        ['Two-way maslak matching', 'If you choose “same as mine”, you only see profiles with your maslak. If the other family chose the same, they only see you when you match them. Nobody is shown a profile that does not fit.'],
-        ['Verified and private', 'Every profile is checked with an ID and photo. Contact details are shared only when both sides accept.'],
-      ],
-      faq: [['Can I see all maslaks?', 'Yes. Choose “any maslak” in your partner preference.']],
-    },
-    ta: {
-      short: 'சுன்னி, ஷாஃபிஈ, ஹனஃபி மேட்ரிமோனி',
-      title: 'சுன்னி முஸ்லிம் மேட்ரிமோனி: ஷாஃபிஈ, ஹனஃபி மணமகள், மணமகன் | ENikah',
-      desc: 'சுன்னி ஷாஃபிஈ அல்லது சுன்னி ஹனஃபி மணமகள், மணமகன்களைக் கண்டறியுங்கள். ENikah மஸ்லக்கை இரு தரப்புக்கும் பொருத்துகிறது. சரிபார்க்கப்பட்ட சுயவிவரங்கள், முதல் 3 மாதங்கள் இலவசம்.',
-      h1: 'மஸ்லக் பொருத்தத்துடன் சுன்னி முஸ்லிம் மேட்ரிமோனி',
-      lede: 'பல குடும்பங்களுக்கு மஸ்லக் முக்கியம். “என் மஸ்லக் மட்டும்” அல்லது “எந்த மஸ்லக்கும்” என்று தேர்வு செய்யலாம்; மற்ற குடும்பத்தின் விருப்பத்தையும் ENikah மதிக்கிறது.',
-      body: [
-        ['ஒவ்வொரு சுயவிவரத்திலும் மஸ்லக்', 'சுன்னி ஹனஃபி, சுன்னி ஷாஃபிஈ, சுன்னி (மற்றவை), ஷியா அல்லது மற்றவை என்று சுயவிவரங்களில் தெளிவாகக் காட்டப்படும்.'],
-        ['இரு தரப்பு மஸ்லக் பொருத்தம்', '“என் மஸ்லக் மட்டும்” என்று தேர்வு செய்தால் உங்கள் மஸ்லக் வரன்கள் மட்டுமே காட்டப்படும். மற்ற குடும்பமும் அப்படித் தேர்வு செய்திருந்தால், நீங்கள் பொருந்தினால் மட்டுமே உங்களைக் காண்பார்கள்.'],
-        ['சரிபார்ப்பும் தனியுரிமையும்', 'ஒவ்வொரு சுயவிவரமும் அடையாள ஆவணம், புகைப்படத்துடன் சரிபார்க்கப்படுகிறது. இரு தரப்பும் ஏற்ற பின்பே தொடர்பு விவரங்கள் பகிரப்படும்.'],
-      ],
-      faq: [['எல்லா மஸ்லக் வரன்களையும் பார்க்கலாமா?', 'ஆம். துணை விருப்பத்தில் “எந்த மஸ்லக்கும்” என்பதைத் தேர்வு செய்யுங்கள்.']],
     },
   },
   {
@@ -190,7 +161,7 @@ const PAGES = [
       lede: 'Brokers bring families together. ENikah gives you verified matches for your candidates, without sharing their contacts until both sides agree.',
       body: [
         ['List your candidates', 'Add up to {cap} brides and grooms on one broker plan. Each candidate is verified with an ID and photo like any other member.'],
-        ['Matches for every candidate', 'Each candidate gets two-way matched profiles by age and maslak, same city first. Send interests on their behalf.'],
+        ['Matches for every candidate', 'Each candidate gets two-way matched profiles by age, same city first. Send interests on their behalf.'],
         ['Clear marking', 'Your candidates are shown as “Via verified broker”, so families know who they are dealing with.'],
         ['Price', 'First 3 months free, then {broker} per 30 days for up to {cap} candidates.'],
       ],
@@ -204,7 +175,7 @@ const PAGES = [
       lede: 'தரகர்கள் குடும்பங்களை இணைக்கிறார்கள். இரு தரப்பும் ஒப்புக்கொள்ளும் வரை தொடர்பு விவரங்களைப் பகிராமல், உங்கள் வரன்களுக்குச் சரிபார்க்கப்பட்ட பொருத்தங்களை ENikah தருகிறது.',
       body: [
         ['உங்கள் வரன்களைப் பதிவிடுங்கள்', 'ஒரு தரகர் திட்டத்தில் {cap} மணமகள், மணமகன்கள் வரை சேர்க்கலாம். ஒவ்வொருவரும் மற்ற உறுப்பினர்களைப் போலவே அடையாள ஆவணம், புகைப்படத்துடன் சரிபார்க்கப்படுவார்கள்.'],
-        ['ஒவ்வொரு வரனுக்கும் பொருத்தங்கள்', 'ஒவ்வொரு வரனுக்கும் வயது, மஸ்லக் அடிப்படையில் இரு தரப்புப் பொருத்தங்கள்; முதலில் அதே ஊர். அவர்கள் சார்பாக விருப்பம் அனுப்பலாம்.'],
+        ['ஒவ்வொரு வரனுக்கும் பொருத்தங்கள்', 'ஒவ்வொரு வரனுக்கும் வயது அடிப்படையில் இரு தரப்புப் பொருத்தங்கள்; முதலில் அதே ஊர். அவர்கள் சார்பாக விருப்பம் அனுப்பலாம்.'],
         ['தெளிவான அடையாளம்', 'உங்கள் வரன்கள் “சரிபார்க்கப்பட்ட தரகர் மூலம்” என்று காட்டப்படும்; குடும்பங்களுக்கு யாருடன் பேசுகிறோம் என்று தெரியும்.'],
         ['கட்டணம்', 'முதல் 3 மாதங்கள் இலவசம்; பின் 30 நாட்களுக்கு {broker}, {cap} வரன்கள் வரை.'],
       ],
@@ -222,7 +193,7 @@ const PAGES = [
       body: [
         ['1. ID and photo check', 'Every bride, groom and broker uploads an ID and a photo. Our admin checks them by hand. Only approved profiles are ever shown.'],
         ['2. ID deleted after checking', 'We keep only a “verified” mark and the profile photo. The ID document itself is deleted once the admin decides.'],
-        ['3. Hidden until both accept', 'Other members see age, city, maslak, education, profession and marital status. Name, phone and photo are shared only when both sides accept an interest.'],
+        ['3. Hidden until both accept', 'Other members see age, city, education, profession and marital status. Name, phone and photo are shared only when both sides accept an interest.'],
         ['4. Only active, verified members', 'Profiles that are not renewed are hidden. Unverified users cannot see anyone.'],
         ['5. Report and block', 'Report any profile that seems fake or behaves badly. Our admin can block it, hiding it from everyone.'],
         ['6. Delete anytime', 'Delete your account and all your data at any time from Account → Delete account.'],
@@ -238,7 +209,7 @@ const PAGES = [
       body: [
         ['1. அடையாள ஆவணம், புகைப்படச் சரிபார்ப்பு', 'ஒவ்வொரு மணமகள், மணமகன், தரகரும் அடையாள ஆவணமும் புகைப்படமும் பதிவேற்றுகிறார்கள். எங்கள் நிர்வாகி நேரடியாகச் சரிபார்க்கிறார். அங்கீகரிக்கப்பட்ட சுயவிவரங்கள் மட்டுமே காட்டப்படும்.'],
         ['2. சரிபார்த்த பின் ஆவணம் நீக்கம்', '“சரிபார்க்கப்பட்டது” என்ற குறியையும் சுயவிவரப் புகைப்படத்தையும் மட்டுமே வைத்திருக்கிறோம். நிர்வாகி முடிவு செய்ததும் அடையாள ஆவணம் நீக்கப்படும்.'],
-        ['3. இருவரும் ஏற்கும் வரை மறைவு', 'மற்ற உறுப்பினர்கள் வயது, ஊர், மஸ்லக், கல்வி, தொழில், திருமண நிலை ஆகியவற்றைக் காண்பார்கள். பெயர், எண், புகைப்படம் இரு தரப்பும் ஏற்ற பின்பே பகிரப்படும்.'],
+        ['3. இருவரும் ஏற்கும் வரை மறைவு', 'மற்ற உறுப்பினர்கள் வயது, ஊர், கல்வி, தொழில், திருமண நிலை ஆகியவற்றைக் காண்பார்கள். பெயர், எண், புகைப்படம் இரு தரப்பும் ஏற்ற பின்பே பகிரப்படும்.'],
         ['4. செயலில் உள்ள, சரிபார்க்கப்பட்டவர்கள் மட்டும்', 'புதுப்பிக்கப்படாத சுயவிவரங்கள் மறைக்கப்படும். சரிபார்க்கப்படாதவர்கள் யாரையும் காண முடியாது.'],
         ['5. புகார், தடை', 'போலியாகத் தோன்றும் அல்லது தவறாக நடந்துகொள்ளும் சுயவிவரம் பற்றிப் புகார் செய்யுங்கள். நிர்வாகி அதைத் தடுத்து அனைவரிடமிருந்தும் மறைக்கலாம்.'],
         ['6. எப்போது வேண்டுமானாலும் நீக்கலாம்', 'கணக்கு → கணக்கை நீக்கு என்பதில் உங்கள் கணக்கையும் எல்லாத் தரவையும் எப்போது வேண்டுமானாலும் நீக்கலாம்.'],
@@ -317,6 +288,8 @@ export async function pingIndexNow() {
 }
 
 export function mountSeo(app) {
+  // Maslak matching was removed; send the old page to the Tamil Nadu page.
+  app.get(['/sunni-muslim-matrimony', '/ta/sunni-muslim-matrimony'], (req, res) => res.redirect(301, req.path.startsWith('/ta/') ? '/ta/tamil-muslim-matrimony' : '/tamil-muslim-matrimony'));
   app.get(`/${INDEXNOW_KEY}.txt`, (req, res) => res.type('text/plain').send(INDEXNOW_KEY));
   app.get('/robots.txt', (req, res) => res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(
     `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /home\nDisallow: /account\nDisallow: /broker\nDisallow: /dashboard\nDisallow: /matches/\nDisallow: /interests\nDisallow: /photo/\nDisallow: /profile/\nDisallow: /reset/\nDisallow: /lang/\nDisallow: /dev/\n\nSitemap: ${CFG.base}/sitemap.xml\n`));

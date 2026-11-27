@@ -6,7 +6,7 @@ import pg from 'pg';
 const PORT = 3999, B = `http://localhost:${PORT}`, ADMIN = '9000000000';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 await db.query('drop schema public cascade; create schema public;');
-const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
+const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', UPI_ID: 'test@oksbi', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r, j) => { srv.stdout.on('data', d => String(d).includes('ENikah site on') && r()); srv.on('exit', () => j(new Error('server exited'))); });
 
 class Browser {
@@ -16,8 +16,8 @@ class Browser {
     const r = await fetch(B + path, { redirect: 'manual', ...opts, headers: { ...(opts.headers || {}), cookie: this.cookie } });
     for (const sc of r.headers.getSetCookie()) { const [kv] = sc.split(';'); const i = kv.indexOf('='); this.jar[kv.slice(0, i)] = kv.slice(i + 1); }
     const loc = r.headers.get('location');
-    const msg = loc && new URL(loc, B).searchParams.get('msg');
-    return { status: r.status, loc: loc && loc.split('?')[0], msg, body: await r.text() };
+    const msg = loc && new URL(loc.split('#')[0], B).searchParams.get('msg');
+    return { status: r.status, loc: loc && loc.split('?')[0], full: loc, msg, body: await r.text() };
   }
   get(p) { return this.req(p); }
   post(p, data) { return this.req(p, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(data).toString() }); }
@@ -27,9 +27,16 @@ const ok = (cond, msg) => { assert.ok(cond, msg); console.log('  ✓', msg); };
 const admin = new Browser();
 const P = (name, g, age, city, maslak, marital, edu, job, pa_min, pa_max, pm) => ({ name, g, age, city, maslak, marital, edu, job, pa_min, pa_max, pm });
 
+// Register and enter the emailed code (read from the database, as the member would from their inbox).
+async function signup(b, phone, kind = 'person') {
+  const r = await b.post('/register', { phone, password: 'secret12', email: `u${phone}@test.in`, kind });
+  const code = (await db.query(`select data->>'code' c from tokens where phone=$1 and kind='emailcode'`, ['91' + phone])).rows[0]?.c;
+  const v = await b.post('/verify-email?next=' + encodeURIComponent(new URLSearchParams(r.full?.split('?')[1] || '').get('next') || '/home'), { code });
+  return { r, v };
+}
 async function member(phone, prof) {
   const b = new Browser(); b.phone = '91' + phone;
-  await b.post('/register', { phone, password: 'secret12', email: '', kind: 'person' });
+  b.sg = await signup(b, phone);
   b.created = await b.post('/profile/new', prof);
   b.pid = +(/ENK(\d+)/.exec(b.created.msg || '') || [])[1];
   return b;
@@ -42,9 +49,10 @@ async function verifyAndApprove(b, target) {
 
 try {
   console.log('Accounts');
-  let r = await admin.post('/register', { phone: ADMIN, password: 'adminpass', kind: 'person' });
+  let r = await admin.post('/register', { phone: ADMIN, password: 'adminpass', email: 'boss@example.com', kind: 'person' });
   ok(r.loc === '/admin', 'admin number registers straight into the admin panel');
   const bride = await member('9111111111', P('Ayesha Begum', 'F', '22', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'Teacher', '25', '32', 'same'));
+  if (process.env.DBG) console.log(bride.created, bride.sg);
   ok(bride.pid === 1001 && /free for 90 days/.test(bride.created.msg), 'bride registers free for 90 days (3 months), gets ENK1001');
   r = await new Browser().post('/login', { phone: '9111111111', password: 'wrong' });
   ok(r.status === 401, 'wrong password rejected');
@@ -52,7 +60,23 @@ try {
   ok(r.status === 303 && r.loc === '/home', 'login works with +91 and spaces');
   r = await new Browser().post('/register', { phone: '9111111111', password: 'secret12' });
   ok(/already registered/.test(r.body), 'same number cannot register twice');
-  const young = new Browser(); await young.post('/register', { phone: '9222222220', password: 'secret12' });
+  r = await new Browser().post('/register', { phone: '9222222229', password: 'secret12', email: '' });
+  ok(r.status === 400 && /valid email/.test(r.body), 'email is required');
+  const ev = new Browser();
+  r = await ev.post('/register', { phone: '9222222228', password: 'secret12', email: 'ev@test.in', kind: 'person' });
+  ok(r.loc === '/verify-email', 'after registering, member must verify email');
+  ok((await ev.get('/home')).loc === '/verify-email', 'site is locked until the email is verified');
+  r = await ev.post('/verify-email', { code: '000000' });
+  ok(r.status === 400 && /Wrong code/.test(r.body), 'wrong code rejected');
+  const evCode = (await db.query(`select data->>'code' c from tokens where phone='919222222228' and kind='emailcode'`)).rows[0].c;
+  r = await ev.post('/verify-email?next=/profile/new', { code: evCode });
+  ok(r.loc === '/profile/new' && /Email verified/.test(r.msg), 'right code verifies the email');
+  ok(!/name="maslak"|name="pm"/.test((await ev.get('/profile/new')).body), 'profile form has no maslak');
+  r = await new Browser().post('/login', { phone: 'ev@test.in', password: 'secret12' });
+  ok(r.loc === '/home', 'login with email works');
+  await new Browser().post('/forgot', { phone: 'EV@test.in' });
+  ok((await db.query(`select count(*) from tokens where phone='919222222228' and kind='reset'`)).rows[0].count === '1', 'forgot password by email sends a reset link');
+  const young = new Browser(); await signup(young, '9222222220');
   r = await young.post('/profile/new', P('Test', 'M', '20', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'X', '', '', 'any'));
   ok(r.status === 400 && /Legal marriage age/.test(r.body), 'groom under 21 rejected');
 
@@ -84,7 +108,7 @@ try {
   r = await bride.post('/matches/1001', {});
   ok(/2 new verified matches/.test(r.msg), 'bride gets 2 matches');
   r = await bride.get('/matches/1001');
-  ok(r.body.includes('ENK1002') && r.body.includes('ENK1006') && !r.body.includes('ENK1004') && !r.body.includes('ENK1005'), 'Chennai first; Nadeem (his age choice) and Abbas (her maslak choice) excluded');
+  ok(r.body.includes('ENK1002') && r.body.includes('ENK1005') && !r.body.includes('ENK1004') && !r.body.includes('ENK1003'), 'Chennai first, closest age; Nadeem (his age choice) excluded; maslak ignored');
   ok(!r.body.includes('Imran') && !r.body.includes('9222222221'), 'names and numbers hidden on match cards');
   r = await bride.post('/matches/1001', {});
   ok(/all 2 profiles for this month/.test(r.msg), 'monthly limit reached');
@@ -118,7 +142,7 @@ try {
   await bride.get(new URL(r.loc, B).pathname);
   ok(+(await db.query('select exp from profiles where id=1001')).rows[0].exp === +after, 'the same payment cannot be applied twice');
   r = await bride.post('/matches/1001', {});
-  ok(/1 new verified match/.test(r.msg), 'new month gives new matches (1 unseen left)');
+  ok(/2 new verified matches/.test(r.msg), 'new month gives new matches');
 
   console.log('Expiry & reminders');
   await db.query(`update profiles set exp=now()+interval '2 days' where id=1001`);
@@ -135,8 +159,8 @@ try {
 
   console.log('Broker');
   const broker = new Browser(); broker.phone = '919333333333';
-  r = await broker.post('/register', { phone: '9333333333', password: 'secret12', kind: 'broker' });
-  ok(r.loc === '/broker/setup', 'broker goes to broker setup');
+  const bs = await signup(broker, '9333333333', 'broker');
+  ok(bs.v.loc === '/broker/setup', 'broker goes to broker setup after verifying email');
   r = await broker.post('/broker/setup', { name: 'Rahim Bureau', city: 'Ambur' });
   ok(/Broker account created/.test(r.msg), 'broker account free for first month');
   ok((await db.query(`select count(*) from notes where phone='91${ADMIN}' and text like 'New broker account: Rahim Bureau%'`)).rows[0].count === '1', 'admin alerted about new broker');
@@ -180,6 +204,45 @@ try {
   r = await new Browser().post('/admin/login', { username: '9111111112', password: 'test-admin-pass-123' });
   ok(r.status === 401, 'other numbers cannot use the admin login');
 
+  console.log('UPI, follow-ups, QR, traffic');
+  const pay = new Browser(); await pay.post('/login', { phone: '9222222222', password: 'secret12' });
+  r = await pay.get('/renew');
+  ok(/<svg/.test(r.body) && /test@oksbi/.test(r.body) && /upi:\/\/pay\?pa=test%40oksbi&amp;pn=ENikah&amp;am=2000\.00/.test(r.body) && /Razorpay/.test(r.body), 'pay page shows UPI QR, UPI ID and Razorpay');
+  r = await pay.post('/renew/upi', { utr: '123' });
+  ok(/transaction ID/.test(r.msg), 'bad UTR rejected');
+  const before2 = (await db.query('select exp from profiles where id=1003')).rows[0].exp;
+  r = await pay.post('/renew/upi', { utr: '412345678901' });
+  ok(/confirm your UPI payment/.test(r.msg), 'member submits UPI transaction ID');
+  r = await admin.get('/admin');
+  ok(/412345678901/.test(r.body) && /Confirm payment/.test(r.body), 'admin sees UPI payment to confirm');
+  const upiId = (await db.query(`select id from payments where utr='412345678901'`)).rows[0].id;
+  r = await admin.post('/admin/upi', { id: upiId, ok: '1' });
+  if (process.env.DBG) console.log(r.msg, (await db.query('select exp from profiles where id=1003')).rows[0].exp, before2, (await db.query("select pid,phone from users where phone='919222222222'")).rows);
+  ok(/confirmed/.test(r.msg) && Math.round(((await db.query('select exp from profiles where id=1003')).rows[0].exp - before2) / 864e5) === 30, 'confirming UPI adds 30 days');
+  ok(/confirmed|Already/.test((await admin.post('/admin/upi', { id: upiId, ok: '1' })).msg) && Math.round(((await db.query('select exp from profiles where id=1003')).rows[0].exp - before2) / 864e5) === 30, 'a UPI payment counts only once');
+
+  const lazy = new Browser(); await signup(lazy, '9555555555');
+  await db.query(`update users set created=now()-interval '3 hours' where phone='919555555555'`);
+  await fetch(B + '/dev/mail'); await fetch(B + '/dev/followups', { method: 'POST' });
+  const mails = await (await fetch(B + '/dev/mail')).json();
+  ok(mails.some(m => m.to === 'u9555555555@test.in' && /Complete your ENikah profile/.test(m.subject) && /சுயவிவர/.test(m.text)), 'member without a profile gets a follow-up email (English + Tamil)');
+  await fetch(B + '/dev/followups', { method: 'POST' });
+  ok(!(await (await fetch(B + '/dev/mail')).json()).some(m => m.to === 'u9555555555@test.in'), 'follow-up email not repeated');
+  r = await admin.get('/admin');
+  ok(/\+919555555555/.test(r.body) && /wa\.me\/919555555555\?text=/.test(r.body) && /No profile yet/.test(r.body), 'admin follow-up list with WhatsApp link');
+  ok(/wa\.me\/919222222221\?text=/.test(r.body) && /Newly verified/.test(r.body), 'admin can WhatsApp newly verified members');
+
+  r = await new Browser().get('/qr.svg?src=poster');
+  ok(r.status === 200 && /<svg/.test(r.body), 'registration QR image');
+  ok(/register\?src=poster/.test((await admin.get('/admin/qr?src=poster')).body), 'printable registration QR for a source');
+
+  const visitor = new Browser();
+  await visitor.get('/?src=yneet');
+  await signup(visitor, '9666666666');
+  ok((await db.query(`select source from users where phone='919666666666'`)).rows[0].source === 'yneet', 'sign-up remembers it came from yneet');
+  r = await admin.get('/admin');
+  ok(/<td>yneet<\/td><td>1<\/td><td>1<\/td>/.test(r.body), 'traffic report shows yneet visitors and sign-ups');
+
   console.log('Tamil');
   const ta = new Browser();
   r = await ta.get('/lang/ta');
@@ -190,7 +253,7 @@ try {
   ok(/குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை/.test(r.body) && /lang="ta"/.test(r.body) && />English</.test(r.body), 'home page in Tamil with an English switch');
   r = await ta.post('/register', { phone: '123', password: 'secret12' });
   ok(/சரியான 10 இலக்க இந்திய மொபைல் எண்ணை/.test(r.body), 'form errors in Tamil');
-  await ta.post('/register', { phone: '9444444444', password: 'secret12', kind: 'person' });
+  await signup(ta, '9444444444');
   r = await ta.post('/profile/new', P('Fathima', 'F', '23', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'Teacher', '', '', 'any'));
   r = await ta.get(r.loc + '?msg=' + encodeURIComponent(r.msg));
   ok(/பதிவு செய்யப்பட்டது! 90 நாட்கள் இலவசம்/.test(r.body) && /ஸலாம், Fathima/.test(r.body) && /சரிபார்க்கப்படவில்லை/.test(r.body), 'dashboard and messages in Tamil');
@@ -202,9 +265,11 @@ try {
   ok(/<link rel="canonical" href="[^"]+\/">/.test(r.body) && /hreflang="ta" href="[^"]+\/ta"/.test(r.body) && /og:image/.test(r.body) && /"FAQPage"/.test(r.body), 'home has canonical, hreflang, OG and FAQ markup');
   r = await bot.get('/ta/tamil-muslim-matrimony');
   ok(r.status === 200 && /lang="ta"/.test(r.body) && /தமிழ் முஸ்லிம் மேட்ரிமோனி/.test(r.body) && /canonical" href="[^"]+\/ta\/tamil-muslim-matrimony"/.test(r.body), 'Tamil content page has its own URL');
-  for (const p of ['/muslim-second-marriage', '/sunni-muslim-matrimony', '/marriage-broker', '/safe-verified-matrimony', '/ta/terms']) ok((await bot.get(p)).status === 200, p + ' loads');
+  for (const p of ['/muslim-second-marriage', '/marriage-broker', '/safe-verified-matrimony', '/ta/terms']) ok((await bot.get(p)).status === 200, p + ' loads');
+  r = await bot.get('/sunni-muslim-matrimony');
+  ok(r.status === 301 && r.loc === '/tamil-muslim-matrimony', 'old maslak page redirects');
   r = await bot.get('/sitemap.xml');
-  ok((r.body.match(/<loc>/g) || []).length === 16 && /\/ta\/marriage-broker/.test(r.body), 'sitemap lists English and Tamil pages');
+  ok((r.body.match(/<loc>/g) || []).length === 14 && /\/ta\/marriage-broker/.test(r.body), 'sitemap lists English and Tamil pages');
   ok(/Disallow: \/admin/.test((await bot.get('/robots.txt')).body), 'robots.txt blocks private pages');
   ok(/noindex/.test((await bot.get('/login')).body), 'login is noindex');
   ok((await bot.get('/og.png')).status === 200, 'share image');

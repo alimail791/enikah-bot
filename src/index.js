@@ -3,6 +3,7 @@ import { migrate } from './db.js';
 import { mount } from './site.js';
 import { pingIndexNow } from './seo.js';
 import { onPaid, runReminders } from './core.js';
+import { runFollowups } from './followup.js';
 import { markPaid, webhookOk } from './pay.js';
 
 const E = process.env;
@@ -29,6 +30,8 @@ app.post('/rzp/webhook', async (req, res) => {
 if (E.DEV_MODE === '1') {
   app.get('/dev/pay/:id', async (req, res) => { const p = await markPaid(req.params.id); if (p) await onPaid(p); res.redirect(303, '/home?msg=' + encodeURIComponent(p ? 'Paid (dev).' : 'Already paid.')); });
   app.post('/dev/reminders', async (req, res) => { await runReminders(); res.json({ ok: true }); });
+  app.post('/dev/followups', async (req, res) => { await runFollowups(); res.json({ ok: true }); });
+  app.get('/dev/mail', async (req, res) => { const { sentMail } = await import('./mail.js'); res.json(sentMail.splice(0)); });
 }
 
 mount(app);
@@ -45,3 +48,5 @@ const port = Number(E.PORT || 3000);
 app.listen(port, () => { console.log(`ENikah site on :${port}`); if (E.DEV_MODE !== '1') setTimeout(pingIndexNow, 15000); });
 setInterval(() => runReminders().catch(e => console.error('[cron]', e)), 60 * 60 * 1000);
 setTimeout(() => runReminders().catch(e => console.error('[cron]', e)), 60 * 1000);
+setInterval(() => runFollowups().catch(e => console.error('[followup]', e)), 30 * 60 * 1000);
+setTimeout(() => runFollowups().catch(e => console.error('[followup]', e)), 2 * 60 * 1000);

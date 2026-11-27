@@ -17,4 +17,4 @@ export const rs = n => '₹' + Number(n).toLocaleString('en-IN');
 export const D = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '-';
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const side = p => p.g === 'F' ? 'Bride' : 'Groom';
-export const card = p => `${p.code} · ${side(p)}, ${p.age}, ${p.city}\n${p.maslak} · ${p.edu} · ${p.job} · ${p.marital}`;
+export const card = p => `${p.code} · ${side(p)}, ${p.age}, ${p.city}\n${p.edu} · ${p.job} · ${p.marital}`;

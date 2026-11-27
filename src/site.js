@@ -7,13 +7,19 @@ import * as C from './core.js';
 import { createLink, markPaid, callbackOk } from './pay.js';
 import { sendMail } from './mail.js';
 import { makeT, LANGS } from './i18n.js';
+import QRCode from 'qrcode';
+import * as track from './track.js';
+import { incomplete, recentlyVerified, message as fuMessage, waLink } from './followup.js';
 import { home as seoHome, contentPage, headTags, mountSeo, urlFor, enPath, PUBLIC_PATHS, SEO_CSS } from './seo.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024 },
   fileFilter: (req, f, cb) => cb(null, /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/.test(f.mimetype)) });
 const h = fn => (req, res, next) => fn(req, res, next).catch(next);
 // Flash messages travel in English and are translated when shown.
-const go = (res, path, msg) => res.redirect(303, path + (msg ? (path.includes('?') ? '&' : '?') + 'msg=' + encodeURIComponent(msg) : ''));
+const go = (res, path, msg) => {
+  const [p, hash] = String(path).split('#');
+  res.redirect(303, p + (msg ? (p.includes('?') ? '&' : '?') + 'msg=' + encodeURIComponent(msg) : '') + (hash ? '#' + hash : ''));
+};
 const CONTACT = () => process.env.CONTACT_EMAIL || 'alimail791@gmail.com';
 
 // ---------- look ----------
@@ -67,13 +73,11 @@ ${req.lang === 'ta' ? '<link rel="preconnect" href="https://fonts.gstatic.com"><
 const errBox = (t, e) => e ? `<div class="err">${esc(t(e))}</div>` : '';
 const opt = (t, list, v) => list.map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(t(x))}</option>`).join('');
 const sideT = (t, p) => t(p.g === 'F' ? 'Bride' : 'Groom');
-const wantText = (t, p) => t('Age {a} · {m} · {city} first · their choice fits you too', {
-  a: p.pa_min ? `${p.pa_min}–${p.pa_max}` : t('any'),
-  m: p.pm === 'same' ? t('{maslak} only', { maslak: t(p.maslak) }) : t('any maslak'), city: esc(p.city) });
+const wantText = (t, p) => t('Age {a} · {city} first · their choice fits you too', { a: p.pa_min ? `${p.pa_min}–${p.pa_max}` : t('any'), city: esc(p.city) });
 
 function profileCard(t, v, extra = '', photo = false) {
   return `<div class="pc">${photo && v.photo_mime ? `<img class="photo" src="/photo/${v.id}" alt="${esc(v.code)}">` : `<div class="ph">${t('Photo shown after both sides accept')}</div>`}
-  <b>${esc(v.code)} · ${sideT(t, v)}, ${v.age}</b><span>${esc(v.city)} · ${esc(t(v.maslak))}</span><span>${esc(v.edu)} · ${esc(v.job)}</span><span>${esc(t(v.marital))}</span>
+  <b>${esc(v.code)} · ${sideT(t, v)}, ${v.age}</b><span>${esc(v.city)}</span><span>${esc(v.edu)} · ${esc(v.job)}</span><span>${esc(t(v.marital))}</span>
   <span class="tag">${t(v.broker ? 'Via verified broker' : 'Verified')}</span>${extra}</div>`;
 }
 
@@ -82,11 +86,10 @@ function profileForm(t, d = {}, { gender = true, submit = 'Save', action = '' } 
   <label>${t('Full name')} <small>${t('Shown only after both sides accept an interest')}</small><input name="name" value="${esc(d.name)}" required maxlength="60"></label>
   ${gender ? `<label>${t('Registering for')}<select name="g" required><option value="">${t('Choose…')}</option><option value="F" ${d.g === 'F' ? 'selected' : ''}>${t('Bride')}</option><option value="M" ${d.g === 'M' ? 'selected' : ''}>${t('Groom')}</option></select></label>` : ''}
   <div class="row"><label>${t('Age')}<input name="age" type="number" inputmode="numeric" min="18" max="70" value="${esc(d.age)}" required></label><label>${t('City / town')}<input name="city" value="${esc(d.city)}" required maxlength="40"></label></div>
-  <div class="row"><label>${t('Maslak')}<select name="maslak" required><option value="">${t('Choose…')}</option>${opt(t, C.MASLAK, d.maslak)}</select></label><label>${t('Marital status')}<select name="marital" required><option value="">${t('Choose…')}</option>${opt(t, C.MARITAL, d.marital)}</select></label></div>
+  <label>${t('Marital status')}<select name="marital" required><option value="">${t('Choose…')}</option>${opt(t, C.MARITAL, d.marital)}</select></label>
   <div class="row"><label>${t('Education')}<input name="edu" value="${esc(d.edu)}" placeholder="${esc(t('e.g. B.Sc, B.E, Alima'))}" required maxlength="40"></label><label>${t('Profession')}<input name="job" value="${esc(d.job)}" placeholder="${esc(t('e.g. Teacher, Business'))}" required maxlength="40"></label></div>
   <h3 style="margin-top:6px">${t('Partner preference')}</h3>
   <div class="row"><label>${t('Partner age from')}<input name="pa_min" type="number" inputmode="numeric" min="18" max="80" value="${esc(d.pa_min)}" placeholder="${esc(t('any'))}"></label><label>${t('to')}<input name="pa_max" type="number" inputmode="numeric" min="18" max="80" value="${esc(d.pa_max)}" placeholder="${esc(t('any'))}"></label></div>
-  <label>${t('Partner maslak')}<select name="pm"><option value="any">${t('Any maslak')}</option><option value="same" ${d.pm === 'same' ? 'selected' : ''}>${t('Same as mine')}</option></select></label>
   <p class="note">${t('Matches are two-way: you see only profiles that fit your choice and whose choice fits you.')}</p>
   <button>${t(submit)}</button></form>`;
 }
@@ -100,8 +103,12 @@ async function startSession(res, phone) {
 const need = (...types) => (req, res, next) => {
   if (!req.user) return go(res, (types.includes('admin') ? '/admin/login' : '/login') + '?next=' + encodeURIComponent(req.originalUrl));
   if (types.length && !types.includes(req.user.type)) return go(res, '/home');
+  // Members must verify their email (and phone, when WhatsApp codes are switched on) before using the site.
+  if (req.user.type !== 'admin' && !req.user.email_ok) return go(res, '/verify-email?next=' + encodeURIComponent(req.originalUrl));
+  if (req.user.type !== 'admin' && C.phoneOtpOn() && !req.user.phone_ok) return go(res, '/verify-phone?next=' + encodeURIComponent(req.originalUrl));
   next();
 };
+const safeNext = n => { n = String(n || ''); return n.startsWith('/') && !n.startsWith('//') ? n : '/home'; };
 const tries = new Map();
 const limited = (key, max = 10) => { const now = Date.now(), t = (tries.get(key) || []).filter(x => now - x < 15 * 60e3); t.push(now); tries.set(key, t); return t.length > max; };
 
@@ -120,6 +127,7 @@ export function mount(app) {
     if (ck.sid) { const tk = await C.getToken(ck.sid, 'sess'); if (tk) { req.user = await C.user(tk.phone); req.sid = ck.sid; } }
     next();
   }));
+  app.use(track.middleware);
   app.get('/lang/:l', (req, res) => {
     const l = LANGS.includes(req.params.l) ? req.params.l : 'en';
     res.cookie('lang', l, { sameSite: 'lax', maxAge: 365 * 864e5, path: '/' });
@@ -140,14 +148,14 @@ export function mount(app) {
       <p>${t('Register free with your first 3 months free. Every profile is checked with ID and photo. You see only active, verified profiles that fit your choice — and theirs. Contacts are shared only when both sides accept.')}</p>
       <div class="acts"><a class="btn gold" href="${req.user ? '/home' : '/register'}">${t(req.user ? 'Go to my profile' : 'Register free')}</a>${req.user ? '' : `<a class="btn alt" href="/login">${t('Log in')}</a>`}</div></div>
       <div class="arch" role="img" aria-label="${esc(t('Arch with crescent'))}"></div></section>
-    <h2>${t('How it works')}</h2><ol class="steps"><li>${t('<b>Register</b> for yourself or a family member — free, first 3 months free.')}</li><li>${t('<b>Get verified:</b> upload an ID and a photo. Our admin checks them; the ID is deleted after checking.')}</li><li>${t('<b>Receive {n} matching profiles a month</b> — matched both ways on age and maslak, same city first.', { n: CFG.monthly })}</li><li>${t('<b>Send interest.</b> When both sides accept, contact details are shared. Please involve family / wali.')}</li></ol>
+    <h2>${t('How it works')}</h2><ol class="steps"><li>${t('<b>Register</b> for yourself or a family member — free, first 3 months free.')}</li><li>${t('<b>Get verified:</b> upload an ID and a photo. Our admin checks them; the ID is deleted after checking.')}</li><li>${t('<b>Receive {n} matching profiles a month</b> — matched both ways on age, same city first.', { n: CFG.monthly })}</li><li>${t('<b>Send interest.</b> When both sides accept, contact details are shared. Please involve family / wali.')}</li></ol>
     <h2>${t('Simple pricing')}</h2><div class="price"><div class="box"><b>${t('Free')}</b>${t('Registration + first 3 months')}</div><div class="box"><b>${rs(CFG.person)}</b>${t('per 30 days for brides and grooms')}</div><div class="box"><b>${rs(CFG.broker)}</b>${t('per 30 days for marriage brokers, up to {n} candidates', { n: CFG.cap })}</div></div>
     <p class="note">${t('Profiles that are not renewed are hidden immediately and come back as soon as the plan is renewed.')}</p>${S.extra}`, { path: '/', fullTitle: S.title, desc: S.desc, head: S.head })); });
 
   both('/privacy', (req, res) => { const t = req.t; res.send(page(req, t('Privacy'), `<h1>${t('Privacy')}</h1><div class="box">
-    <p>${t('We collect your mobile number, optional email, and the profile details you enter. ID proof is used only to verify you and is deleted after the admin decision; we keep only a "verified" mark and your profile photo.')}</p>
+    <p>${t('We collect your mobile number, email, and the profile details you enter. ID proof is used only to verify you and is deleted after the admin decision; we keep only a "verified" mark and your profile photo.')}</p>
     <p>${t('Other members see your profile without your name, phone or photo. These are shared only with a member whose interest you accept (or who accepts yours).')}</p>
-    <p>${t('You can delete your account and all your data at any time from Account → Delete account. Payments are processed by Razorpay; we do not store card or UPI details.')}</p>
+    <p>${t('You can delete your account and all your data at any time from Account → Delete account. Payments are made by UPI or through Razorpay; we do not store card or bank details.')}</p>
     <p>${t('Contact: {email}', { email: esc(CONTACT()) })}</p></div>`, { path: '/privacy', head: headTags(req, { path: '/privacy', title: t('Privacy') + ' · ENikah', desc: t('ENikah — verified Muslim matrimony for families. Free registration, first 3 months free.') }) })); });
   both('/terms', (req, res) => { const t = req.t; res.send(page(req, t('Terms'), `<h1>${t('Terms')}</h1><div class="box">
     <p>${t("ENikah is for adults seeking marriage only (brides 18+, grooms 21+). Profiles must be genuine and entered with the person's consent. Fake, misleading or abusive profiles are blocked without refund.")}</p>
@@ -159,41 +167,41 @@ export function mount(app) {
     <form class="fl box" method="post" action="/register">
       <label>${t('Mobile number')}<input name="phone" inputmode="tel" autocomplete="tel" value="${esc(b.phone)}" placeholder="${esc(t('10-digit mobile'))}" required></label>
       <label>${t('Password')} <small>${t('At least 6 characters')}</small><input name="password" type="password" autocomplete="new-password" required minlength="6"></label>
-      <label>${t('Email')} <small>${t('Optional — for alerts and password reset')}</small><input name="email" type="email" autocomplete="email" value="${esc(b.email)}"></label>
+      <label>${t('Email')} <small>${t('We send a code to check it. Used for alerts and password reset.')}</small><input name="email" type="email" autocomplete="email" value="${esc(b.email)}" required></label>
       <label>${t('I am registering as')}<select name="kind"><option value="person">${t('Bride / groom (myself or family)')}</option><option value="broker" ${b.kind === 'broker' ? 'selected' : ''}>${t('Marriage broker')}</option></select></label>
       <button>${t('Create account')}</button><p class="note">${t('Already registered?')} <a href="/login">${t('Log in')}</a></p></form>`); };
   app.get('/register', (req, res) => req.user ? go(res, '/home') : res.send(regForm(req)));
   app.post('/register', h(async (req, res) => {
     if (limited('reg:' + req.ip, 40)) return res.status(429).send(regForm(req, 'Too many attempts. Please try again in 15 minutes.', req.body));
-    const r = await C.register(req.body);
+    const r = await C.register(req.body, { source: track.sourceLabel(req), lang: req.lang });
     if (r.err) return res.status(400).send(regForm(req, r.err, req.body));
     await startSession(res, r.phone);
     go(res, r.next);
   }));
 
   const loginForm = (req, e) => { const t = req.t; return page(req, t('Log in'), `<h1>${t('Log in')}</h1>${errBox(t, e)}<form class="fl box" method="post" action="/login${req.query.next ? '?next=' + encodeURIComponent(req.query.next) : ''}">
-    <label>${t('Mobile number')}<input name="phone" inputmode="tel" autocomplete="tel" required></label><label>${t('Password')}<input name="password" type="password" autocomplete="current-password" required></label>
-    <button>${t('Log in')}</button><p class="note"><a href="/forgot">${t('Forgot password?')}</a> · ${t('New here?')} <a href="/register">${t('Register free')}</a></p></form>`); };
+    <label>${t('Mobile number or email')}<input name="phone" autocomplete="username" required></label><label>${t('Password')}<input name="password" type="password" autocomplete="current-password" required></label>
+    <button>${t('Log in')}</button><div class="acts"><a class="btn alt" href="/forgot">${t('Forgot password?')}</a><a class="btn alt" href="/register">${t('New here? Register free')}</a></div></form>`); };
   app.get('/login', (req, res) => req.user ? go(res, '/home') : res.send(loginForm(req)));
   app.post('/login', h(async (req, res) => {
-    if (limited('login:' + req.ip) || limited('login:' + C.normPhone(req.body.phone))) return res.status(429).send(loginForm(req, 'Too many attempts. Please try again in 15 minutes.'));
+    if (limited('login:' + req.ip, 20) || limited('login:' + String(req.body.phone || '').trim().toLowerCase())) return res.status(429).send(loginForm(req, 'Too many attempts. Please try again in 15 minutes.'));
     const ph = await C.login(req.body.phone, req.body.password);
-    if (!ph) return res.status(401).send(loginForm(req, 'Wrong mobile number or password.'));
+    if (!ph) return res.status(401).send(loginForm(req, 'Wrong mobile number, email or password.'));
     await startSession(res, ph);
     const next = String(req.query.next || '');
     go(res, next.startsWith('/') && !next.startsWith('//') ? next : '/home');
   }));
   app.post('/logout', h(async (req, res) => { if (req.sid) await q('delete from tokens where token=$1', [req.sid]); res.clearCookie('sid', { path: '/' }); go(res, '/'); }));
 
-  app.get('/forgot', (req, res) => { const t = req.t; res.send(page(req, t('Reset password'), `<h1>${t('Reset password')}</h1><form class="fl box" method="post" action="/forgot"><label>${t('Mobile number')}<input name="phone" inputmode="tel" required></label><button>${t('Send reset link')}</button>
+  app.get('/forgot', (req, res) => { const t = req.t; res.send(page(req, t('Reset password'), `<h1>${t('Reset password')}</h1><form class="fl box" method="post" action="/forgot"><label>${t('Mobile number or email')}<input name="phone" autocomplete="username" required></label><button>${t('Send reset link')}</button>
     <p class="note">${t('The link goes to the email on your account. No email on your account? Contact {email}.', { email: esc(CONTACT()) })}</p></form>`)); });
   app.post('/forgot', h(async (req, res) => {
-    const ph = C.normPhone(req.body.phone), u = ph && await C.user(ph);
-    if (u?.email && !limited('forgot:' + ph)) {
+    const u = await C.findUser(req.body.phone), ph = u?.phone;
+    if (u?.email && !limited('forgot:' + ph, 5)) {
       const tk = await C.newToken('reset', ph, '', null, 1);
-      await sendMail(u.email, 'ENikah password reset', `Reset your ENikah password (valid 1 hour):\n${CFG.base}/reset/${tk}\n\nIf you didn't ask for this, ignore this email.`);
+      await sendMail(u.email, 'ENikah password reset', `Reset your ENikah password (valid 1 hour):\n${CFG.base}/reset/${tk}\n\nஉங்கள் ENikah கடவுச்சொல்லை மாற்ற (1 மணி நேரம் செல்லும்):\n${CFG.base}/reset/${tk}\n\nIf you didn't ask for this, ignore this email.`);
     }
-    go(res, '/login', 'If that number has an email on file, a reset link has been sent.');
+    go(res, '/login', 'If that number or email is registered, a reset link has been sent to the email.');
   }));
   app.get('/reset/:t', h(async (req, res) => {
     const t = req.t;
@@ -217,7 +225,10 @@ export function mount(app) {
   app.post('/account', need(), h(async (req, res) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return go(res, '/account', 'Please enter a valid email.');
-    await q('update users set email=$2 where phone=$1', [req.user.phone, email || null]);
+    if (!email && req.user.type !== 'admin') return go(res, '/account', 'Please enter a valid email.');
+    const changed = (email || '') !== (req.user.email || '');
+    await q('update users set email=$2, email_ok=case when $3 then false else email_ok end where phone=$1', [req.user.phone, email || null, changed]);
+    if (changed && req.user.type !== 'admin') { await C.sendEmailCode(req.user.phone); return go(res, '/verify-email?next=/account', 'We sent a code to your new email.'); }
     if (req.body.password) { if (req.body.password.length < 6) return go(res, '/account', 'Password must be at least 6 characters.'); await q('update users set pw=$2 where phone=$1', [req.user.phone, C.hashPw(req.body.password)]); }
     go(res, '/account', 'Saved.');
   }));
@@ -225,6 +236,59 @@ export function mount(app) {
     if (String(req.body.confirm || '').trim().toUpperCase() !== 'DELETE') return go(res, '/account', 'Please type DELETE to confirm.');
     await C.deleteAccount(req.user.phone); res.clearCookie('sid', { path: '/' });
     go(res, '/', 'Your account and data have been deleted.');
+  }));
+
+  // ---------- email & phone verification ----------
+  const signedIn = (req, res, next) => req.user ? next() : go(res, '/login?next=' + encodeURIComponent(req.originalUrl));
+  const codeForm = (req, kind, e) => { const t = req.t, u = req.user, nx = encodeURIComponent(safeNext(req.query.next));
+    const isMail = kind === 'email';
+    return page(req, t(isMail ? 'Verify your email' : 'Verify your mobile number'), `<h1>${t(isMail ? 'Verify your email' : 'Verify your mobile number')}</h1>${errBox(t, e)}
+      <p>${isMail ? t('We sent a 6-digit code to {email}. Check your inbox (and Spam).', { email: '<b>' + esc(u.email || '') + '</b>' }) : t('We sent a 6-digit code to +{phone} on WhatsApp.', { phone: esc(u.phone) })}</p>
+      <form class="fl box" method="post" action="/verify-${kind}?next=${nx}"><label>${t('Code')}<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label><button>${t('Verify')}</button></form>
+      <div class="acts"><form method="post" action="/verify-${kind}/resend?next=${nx}"><button class="alt">${t('Send a new code')}</button></form></div>
+      ${isMail ? `<form class="fl box" method="post" action="/verify-email/change?next=${nx}"><h3>${t('Wrong email?')}</h3><label>${t('Email')}<input name="email" type="email" value="${esc(u.email)}" required></label><button class="alt">${t('Change email and send code')}</button></form>` : ''}`); };
+  app.get('/verify-email', signedIn, h(async (req, res) => {
+    if (req.user.email_ok || req.user.type === 'admin') return go(res, safeNext(req.query.next), req.query.msg);
+    if (!req.user.email) return res.send(codeForm(req, 'email', 'Please enter a valid email.'));
+    const has = await one(`select 1 from tokens where phone=$1 and kind='emailcode' and expires>now()`, [req.user.phone]);
+    if (!has) await C.sendEmailCode(req.user.phone);
+    res.send(codeForm(req, 'email'));
+  }));
+  app.post('/verify-email', signedIn, h(async (req, res) => {
+    if (limited('ecode:' + req.user.phone, 12)) return res.status(429).send(codeForm(req, 'email', 'Too many attempts. Please try again in 15 minutes.'));
+    const e = await C.checkEmailCode(req.user.phone, req.body.code);
+    if (e) return res.status(400).send(codeForm(req, 'email', e));
+    go(res, C.phoneOtpOn() ? '/verify-phone?next=' + encodeURIComponent(safeNext(req.query.next)) : safeNext(req.query.next), 'Email verified. Thank you!');
+  }));
+  app.post('/verify-email/resend', signedIn, h(async (req, res) => {
+    const e = await C.sendEmailCode(req.user.phone);
+    go(res, '/verify-email?next=' + encodeURIComponent(safeNext(req.query.next)), e || 'A new code has been sent.');
+  }));
+  app.post('/verify-email/change', signedIn, h(async (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!C.validEmail(email)) return go(res, '/verify-email', 'Please enter a valid email.');
+    if (await one('select 1 from users where lower(email)=$1 and email_ok and phone<>$2', [email, req.user.phone])) return go(res, '/verify-email', 'This email is already registered. Please log in.');
+    await q(`update users set email=$2, email_ok=false where phone=$1`, [req.user.phone, email]);
+    await q(`delete from tokens where phone=$1 and kind='emailcode'`, [req.user.phone]);
+    const e = await C.sendEmailCode(req.user.phone);
+    go(res, '/verify-email?next=' + encodeURIComponent(safeNext(req.query.next)), e || 'A new code has been sent.');
+  }));
+  app.get('/verify-phone', signedIn, h(async (req, res) => {
+    if (!C.phoneOtpOn() || req.user.phone_ok || req.user.type === 'admin') return go(res, safeNext(req.query.next));
+    const has = await one(`select 1 from tokens where phone=$1 and kind='phonecode' and expires>now()`, [req.user.phone]);
+    const e = has ? null : await C.sendPhoneCode(req.user.phone);
+    res.send(codeForm(req, 'phone', e));
+  }));
+  app.post('/verify-phone', signedIn, h(async (req, res) => {
+    if (limited('pcode:' + req.user.phone, 12)) return res.status(429).send(codeForm(req, 'phone', 'Too many attempts. Please try again in 15 minutes.'));
+    const e = await C.checkPhoneCode(req.user.phone, req.body.code);
+    if (e) return res.status(400).send(codeForm(req, 'phone', e));
+    go(res, safeNext(req.query.next), 'Mobile number verified. Thank you!');
+  }));
+  app.post('/verify-phone/resend', signedIn, h(async (req, res) => {
+    if (limited('presend:' + req.user.phone, 4)) return go(res, '/verify-phone', 'Please wait a minute before asking for a new code.');
+    const e = await C.sendPhoneCode(req.user.phone);
+    go(res, '/verify-phone?next=' + encodeURIComponent(safeNext(req.query.next)), e || 'A new code has been sent.');
   }));
 
   app.get('/home', need(), (req, res) => {
@@ -242,7 +306,7 @@ export function mount(app) {
     go(res, '/dashboard', `Registered! Profile ENK${id} is free for ${CFG.free} days. Next: upload your ID and photo to get verified.`);
   }));
 
-  const renewBtn = (t, label) => `<form method="post" action="/renew"><button class="gold">${esc(label)}</button></form>`;
+  const renewBtn = (t, label) => `<a class="btn gold" href="/renew">${esc(label)}</a>`;
   const notesBox = (t, notes) => notes.length ? `<h2>${t('Updates')}</h2><div class="box">${notes.map(n => `<p${n.seen ? ' class="note"' : ''}>${esc(D(n.created))} — ${esc(t(n.text))}${n.link ? ` <a href="${esc(n.link)}">${t('Open')}</a>` : ''}</p>`).join('')}</div>` : '';
 
   app.get('/dashboard', need('person'), h(async (req, res) => {
@@ -379,10 +443,32 @@ export function mount(app) {
   }));
 
   // ---------- payments ----------
+  // Pay page: UPI (QR / app) to the owner's UPI ID, confirmed by the admin; or Razorpay (card, net banking, UPI).
+  const UPI = () => (process.env.UPI_ID || '').trim();
+  app.get('/renew', need('person', 'broker'), h(async (req, res) => {
+    const t = req.t, u = req.user, amt = u.type === 'broker' ? CFG.broker : CFG.person, ref = u.type === 'broker' ? 'broker ' + u.phone.slice(-4) : 'ENK' + u.pid;
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(UPI())}&pn=${encodeURIComponent(process.env.UPI_NAME || 'ENikah')}&am=${amt}.00&cu=INR&tn=${encodeURIComponent('ENikah ' + ref)}`;
+    const qr = UPI() ? await QRCode.toString(upiUrl, { type: 'svg', margin: 1, width: 240 }) : '';
+    const claimed = await all(`select utr, amount, created from payments where phone=$1 and method='upi' and status='claimed' order by id desc`, [u.phone]);
+    res.send(page(req, t('Renew plan'), `<h1>${t('Renew for 30 days — {price}', { price: rs(amt) })}</h1>
+      <p class="note">${t('Renewing adds 30 days to your current end date, so you lose nothing by paying early.')}</p>
+      ${claimed.length ? `<div class="msg">${t('We received your payment details (UTR {utr}). The admin will confirm it soon.', { utr: esc(claimed[0].utr) })}</div>` : ''}
+      ${UPI() ? `<div class="box"><h2 style="margin-top:0">${t('Pay by UPI')}</h2><p>${t('Scan this QR with GPay, PhonePe, Paytm or any UPI app, or tap the button on your phone. Amount: {price}.', { price: rs(amt) })}</p>
+        <div style="max-width:240px;background:#fff;padding:8px;border-radius:12px">${qr}</div>
+        <p>${t('UPI ID')}: <b>${esc(UPI())}</b></p><div class="acts"><a class="btn" href="${esc(upiUrl)}">${t('Open UPI app')}</a></div>
+        <form class="fl" method="post" action="/renew/upi" style="margin-top:16px"><label>${t('After paying, enter the UPI transaction ID (UTR)')} <small>${t('12-digit number shown in your UPI app after payment')}</small><input name="utr" inputmode="numeric" required maxlength="22"></label><button>${t('Submit payment details')}</button></form></div>` : ''}
+      <div class="box"><h2 style="margin-top:0">${t(UPI() ? 'Or pay online with Razorpay' : 'Pay online with Razorpay')}</h2><p class="note">${t('Card, net banking, wallets or UPI. Your plan is extended automatically.')}</p><form method="post" action="/renew"><button class="gold">${t('Pay {price} with Razorpay', { price: rs(amt) })}</button></form></div>`));
+  }));
+  app.post('/renew/upi', need('person', 'broker'), h(async (req, res) => {
+    if (!UPI()) return go(res, '/renew');
+    const amt = req.user.type === 'broker' ? CFG.broker : CFG.person;
+    const e = await C.claimUpi(req.user.phone, req.user.type, amt, req.body.utr);
+    go(res, '/renew', e || 'Thank you. The admin will confirm your UPI payment soon and your plan will be extended.');
+  }));
   app.post('/renew', need('person', 'broker'), h(async (req, res) => {
     const amt = req.user.type === 'broker' ? CFG.broker : CFG.person;
     try { res.redirect(303, await createLink(req.user.phone, req.user.type, amt)); }
-    catch (e) { console.error(e); go(res, '/home', 'Sorry, the payment page could not be opened. Please try again in a few minutes.'); }
+    catch (e) { console.error(e); go(res, '/renew', 'Sorry, the payment page could not be opened. Please try again in a few minutes.'); }
   }));
   app.get('/paid', h(async (req, res) => {
     if (callbackOk(req.query) && req.query.razorpay_payment_link_status === 'paid') { const p = await markPaid(req.query.razorpay_payment_link_id); if (p) await C.onPaid(p); }
@@ -416,6 +502,7 @@ export function mount(app) {
     const t = req.t;
     const r = await one(`select (select count(*) from (${P_SQL}) v where v.live and v.status='verified') live, (select count(*) from (${P_SQL}) v where not v.live) hidden,
       (select count(*) from users where type='person') people, (select count(*) from users where type='broker' and exp>now()) brokers,
+      (select count(*) from users where pw is not null and type is distinct from 'admin') accounts,
       (select count(*) from interests) ints, (select count(*) from interests where st='accepted') acc,
       (select coalesce(sum(amount),0) from payments where status='paid' and paid_at>=date_trunc('month', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata') mon,
       (select coalesce(sum(amount),0) from payments where status='paid') total`);
@@ -427,18 +514,42 @@ export function mount(app) {
     const show = (d, part, mime) => !d ? `<p class="note">${t('No document')}</p>` : mime === 'application/pdf' ? `<a href="/admin/doc/${d.id}/${part}">${t('Open PDF')}</a>` : `<img class="doc" src="/admin/doc/${d.id}/${part}" alt="${part}">`;
     const decideBtns = (kind, ref) => `<div class="acts"><form method="post" action="/admin/decide"><input type="hidden" name="kind" value="${kind}"><input type="hidden" name="ref" value="${esc(ref)}"><input type="hidden" name="ok" value="1"><button>${t('Approve')}</button></form><form method="post" action="/admin/decide"><input type="hidden" name="kind" value="${kind}"><input type="hidden" name="ref" value="${esc(ref)}"><input type="hidden" name="ok" value="0"><button class="red">${t('Reject')}</button></form></div>`;
     const find = req.query.find && await getP(+String(req.query.find).replace(/\D/g, ''));
-    const det = p => `${sideT(t, p)}, ${p.age}, ${esc(p.city)} · ${esc(t(p.maslak))} · ${esc(p.edu)} · ${esc(p.job)} · ${esc(t(p.marital))}`;
+    const upis = await all(`select p.*, u.name from payments p left join users u on u.phone=p.phone where p.method='upi' and p.status='claimed' order by p.id`);
+    const fu = await incomplete(), ver = await recentlyVerified(), traffic = await track.report(30);
+    const stageT = { email: t('Email not verified'), profile: t('No profile yet'), docs: t('No ID / photo yet') };
+    const ago = d => { const hrs = Math.round((Date.now() - new Date(d)) / 3600e3); return hrs < 24 ? t('{n} h ago', { n: hrs }) : t('{n} days ago', { n: Math.round(hrs / 24) }); };
+    const det = p => `${sideT(t, p)}, ${p.age}, ${esc(p.city)} · ${esc(p.edu)} · ${esc(p.job)} · ${esc(t(p.marital))}`;
     res.send(page(req, t('Admin'), `<h1>${t('Admin')}</h1>
-      <div class="stats"><div class="stat"><b>${r.live}</b><span>${t('Live & verified profiles')}</span></div><div class="stat"><b>${r.hidden}</b><span>${t('Hidden (not renewed)')}</span></div><div class="stat"><b>${r.people} · ${r.brokers}</b><span>${t('Members · active brokers')}</span></div><div class="stat"><b>${r.ints} · ${r.acc}</b><span>${t('Interests · accepted')}</span></div><div class="stat"><b>${rs(r.mon)}</b><span>${t('Revenue this month (total {total})', { total: rs(r.total) })}</span></div></div>
-      <h2>${t('Pending verification ({n})', { n: pend.length + pb.length })}</h2>
+      <p class="note"><a href="#pending">${t('Pending')}</a> · <a href="#upi">UPI</a> · <a href="#followup">${t('Follow up')}</a> · <a href="#traffic">${t('Traffic')}</a> · <a href="#qr">${t('Registration QR')}</a> · <a href="#find">${t('Find a profile')}</a> · <a href="#reports">${t('Reports')}</a></p>
+      <div class="stats"><div class="stat"><b>${r.accounts}</b><span>${t('Accounts registered')}</span></div><div class="stat"><b>${fu.length}</b><span>${t('Need follow-up')}</span></div><div class="stat"><b>${r.live}</b><span>${t('Live & verified profiles')}</span></div><div class="stat"><b>${r.hidden}</b><span>${t('Hidden (not renewed)')}</span></div><div class="stat"><b>${r.people} · ${r.brokers}</b><span>${t('Members · active brokers')}</span></div><div class="stat"><b>${r.ints} · ${r.acc}</b><span>${t('Interests · accepted')}</span></div><div class="stat"><b>${rs(r.mon)}</b><span>${t('Revenue this month (total {total})', { total: rs(r.total) })}</span></div></div>
+      <h2 id="pending">${t('Pending verification ({n})', { n: pend.length + pb.length })}</h2>
+      <p class="note">${t('Only members who uploaded an ID and photo appear here. Members who registered but did not upload are under Follow up.')}</p>
       ${pend.map(p => { const d = docs.get('p:' + p.id); return `<div class="box"><h3>${esc(p.code)} · ${esc(p.name)}</h3><p>${det(p)}<br><span class="note">${p.broker ? t('Broker') + ' +' + esc(p.broker) : t('Mobile') + ' +' + esc(p.owner)}</span></p><div class="row"><div><h3>${t('ID')}</h3>${show(d, 'id', d?.id_mime)}</div><div><h3>${t('Photo')}</h3>${show(d, 'photo', d?.photo_mime)}</div></div>${decideBtns('p', p.id)}</div>`; }).join('')}
       ${pb.map(b => { const d = docs.get('b:' + b.phone); return `<div class="box"><h3>${t('Broker')} · ${esc(b.name)}</h3><p>${esc(b.city)} · +${esc(b.phone)}</p>${show(d, 'id', d?.id_mime)}${decideBtns('b', b.phone)}</div>`; }).join('')}
       ${pend.length + pb.length ? '' : `<p class="note">${t('Nothing pending.')}</p>`}
-      <h2>${t('Find a profile')}</h2><form class="row" method="get" action="/admin"><input name="find" placeholder="ENK1234" value="${esc(req.query.find)}"><button>${t('Find')}</button></form>
+      <h2 id="upi">${t('UPI payments to confirm ({n})', { n: upis.length })}</h2>
+      ${upis.length ? upis.map(x => `<div class="box"><b>${rs(x.amount)}</b> · ${esc(x.name || '')} +${esc(x.phone)} · ${t(x.kind === 'broker' ? 'Broker' : 'Member')}<br>${t('UTR')}: <b>${esc(x.utr)}</b> · ${D(x.created)}
+        <p class="note">${t('Check this UTR in your bank or UPI app before confirming.')}</p><div class="acts"><form method="post" action="/admin/upi"><input type="hidden" name="id" value="${x.id}"><input type="hidden" name="ok" value="1"><button>${t('Confirm payment')}</button></form><form method="post" action="/admin/upi"><input type="hidden" name="id" value="${x.id}"><input type="hidden" name="ok" value="0"><button class="red">${t('Not received')}</button></form></div></div>`).join('') : `<p class="note">${t('Nothing to confirm.')}</p>`}
+
+      <h2 id="followup">${t('Follow up ({n})', { n: fu.length })}</h2>
+      <p class="note">${t('People who registered but did not finish. They get reminder emails automatically; tap WhatsApp to send a ready message from your phone.')}</p>
+      ${fu.length ? `<table class="stack"><thead><tr><th>${t('Mobile')}</th><th>${t('Status')}</th><th>${t('Source')}</th><th></th></tr></thead><tbody>${fu.map(x => `<tr><td><b>+${esc(x.phone)}</b>${x.code && x.code !== 'broker' ? ' · ' + esc(x.code) : ''}<br><span class="note">${esc(x.email || '')}</span></td><td>${stageT[x.stage]}<br><span class="note">${ago(x.created)}</span></td><td>${esc(x.source || '')}</td>
+        <td><div class="acts"><a class="btn" href="${esc(waLink(x.phone, fuMessage(x.stage, { lang: x.lang, code: x.code || '' })))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn alt" href="tel:+${esc(x.phone)}">${t('Call')}</a></div></td></tr>`).join('')}</tbody></table>` : `<p class="note">${t('Everyone has finished registering.')}</p>`}
+      ${ver.length ? `<h3 style="margin-top:18px">${t('Newly verified — send a welcome message')}</h3><table class="stack"><tbody>${ver.map(v => `<tr><td><b>${esc(v.code)}</b> ${esc(v.name)}</td><td>+${esc(v.phone)}</td><td><div class="acts"><a class="btn" href="${esc(waLink(v.phone, fuMessage('verified', { lang: v.lang, code: v.code })))}" target="_blank" rel="noopener">WhatsApp</a><form method="post" action="/admin/wa-done"><input type="hidden" name="phone" value="${esc(v.phone)}"><input type="hidden" name="step" value="wa-verified-${v.id}"><button class="alt">${t('Done')}</button></form></div></td></tr>`).join('')}</tbody></table>` : ''}
+
+      <h2 id="traffic">${t('Traffic and sign-ups — last 30 days')}</h2>
+      ${traffic.length ? `<table><thead><tr><th>${t('Source')}</th><th>${t('Visitors')}</th><th>${t('Registered')}</th><th>${t('Profiles')}</th><th>${t('Verified')}</th></tr></thead><tbody>${traffic.map(x => `<tr><td>${esc(x.source)}</td><td>${x.visitors}</td><td>${x.signups}</td><td>${x.profiles}</td><td>${x.verified}</td></tr>`).join('')}</tbody></table>` : `<p class="note">${t('No visits recorded yet.')}</p>`}
+      <p class="note">${t('Add ?src= to links you share so each one is counted separately, for example:')}<br>${['yneet', 'classcoach', 'testmandi', 'whatsapp', 'facebook', 'poster'].map(x => `<code>${esc(CFG.base)}/?src=${x}</code>`).join('<br>')}</p>
+
+      <h2 id="qr">${t('Registration QR')}</h2>
+      <form class="row" method="get" action="/admin/qr"><input name="src" placeholder="${esc(t('Where will you put it? e.g. poster, masjid, yneet'))}" maxlength="30"><button>${t('Make QR code')}</button></form>
+      <div class="acts"><a class="btn alt" href="/admin/qr?src=qr">${t('Show the general QR code')}</a></div>
+
+      <h2 id="find">${t('Find a profile')}</h2><form class="row" method="get" action="/admin"><input name="find" placeholder="ENK1234" value="${esc(req.query.find)}"><button>${t('Find')}</button></form>
       ${req.query.find ? (find ? `<div class="box"><h3>${esc(find.code)} · ${esc(find.name)}</h3><p>${det(find)}<br>${t('Status')}: <b>${t('status:' + find.status)}</b> · ${t(find.live ? 'Active' : 'Expired')} · ${t('Plan till {date}', { date: D(find.till) })} · ${find.broker ? t('Broker') + ' +' + esc(find.broker) : t('Mobile') + ' +' + esc(find.owner)}</p>
         <div class="acts"><form method="post" action="/admin/block"><input type="hidden" name="id" value="${find.id}"><input type="hidden" name="on" value="${find.status === 'blocked' ? 0 : 1}"><button class="${find.status === 'blocked' ? '' : 'red'}">${t(find.status === 'blocked' ? 'Unblock' : 'Block')}</button></form>
         <form method="post" action="/admin/extend"><input type="hidden" name="id" value="${find.id}"><button class="gold">${t('Add 30 days (cash payment {price})', { price: rs(find.broker ? CFG.broker : CFG.person) })}</button></form></div>${find.broker ? `<p class="note">${t("Adding days to a candidate extends the broker's plan.")}</p>` : ''}</div>` : `<p class="note">${t('Not found.')}</p>`) : ''}
-      <h2>${t('Reports')}</h2>${reps.length ? `<table class="stack"><thead><tr><th>${t('Profile')}</th><th>${t('Reason')}</th><th>${t('From')}</th><th></th></tr></thead><tbody>${reps.map(x => `<tr><td><a href="/admin?find=ENK${x.pid}">ENK${x.pid}</a> (${t('status:' + (x.status || 'deleted'))})</td><td>${esc(x.reason)}</td><td>+${esc(x.phone)} · ${D(x.created)}</td><td>${x.status && x.status !== 'blocked' ? `<form method="post" action="/admin/block"><input type="hidden" name="id" value="${x.pid}"><input type="hidden" name="on" value="1"><button class="red">${t('Block')}</button></form>` : ''}</td></tr>`).join('')}</tbody></table>` : `<p class="note">${t('No reports.')}</p>`}
+      <h2 id="reports">${t('Reports')}</h2>${reps.length ? `<table class="stack"><thead><tr><th>${t('Profile')}</th><th>${t('Reason')}</th><th>${t('From')}</th><th></th></tr></thead><tbody>${reps.map(x => `<tr><td><a href="/admin?find=ENK${x.pid}">ENK${x.pid}</a> (${t('status:' + (x.status || 'deleted'))})</td><td>${esc(x.reason)}</td><td>+${esc(x.phone)} · ${D(x.created)}</td><td>${x.status && x.status !== 'blocked' ? `<form method="post" action="/admin/block"><input type="hidden" name="id" value="${x.pid}"><input type="hidden" name="on" value="1"><button class="red">${t('Block')}</button></form>` : ''}</td></tr>`).join('')}</tbody></table>` : `<p class="note">${t('No reports.')}</p>`}
       <h2>${t('Expiring in 7 days')}</h2>${exp.length ? `<table class="stack"><tbody>${exp.map(e => `<tr><td>${esc(e.code === 'Broker' ? t('Broker') : e.code)}</td><td>${esc(e.name)}</td><td>${D(e.exp)}</td></tr>`).join('')}</tbody></table><p class="note">${t('They get reminders 3 days before and on expiry.')}</p>` : `<p class="note">${t('Nothing expiring.')}</p>`}`));
   }));
   app.get('/admin/doc/:id/:part(id|photo)', need('admin'), h(async (req, res) => {
@@ -452,6 +563,23 @@ export function mount(app) {
     const on = req.body.on === '1', p = await one(`update profiles set status=$2 where id=$1 returning id`, [+req.body.id, on ? 'blocked' : 'verified']);
     go(res, `/admin?find=ENK${+req.body.id}`, p ? `ENK${p.id} ${on ? 'blocked — hidden from everyone' : 'unblocked'}.` : 'Not found.');
   }));
+  app.post('/admin/upi', need('admin'), h(async (req, res) => go(res, '/admin#upi', await C.decideUpi(+req.body.id, req.body.ok === '1'))));
+  app.post('/admin/wa-done', need('admin'), h(async (req, res) => { await q('insert into followups(phone,step) values($1,$2) on conflict do nothing', [String(req.body.phone), String(req.body.step).slice(0, 40)]); go(res, '/admin#followup'); }));
+
+  // Registration QR: public SVG (so it can be printed or shared) and a printable admin poster.
+  const regUrl = src => `${CFG.base}/register${src ? '?src=' + encodeURIComponent(src) : ''}`;
+  const cleanSrc = s => String(s || '').toLowerCase().replace(/[^\w.\-]/g, '').slice(0, 30);
+  app.get('/qr.svg', h(async (req, res) => res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(await QRCode.toString(regUrl(cleanSrc(req.query.src) || 'qr'), { type: 'svg', margin: 2, width: 600, color: { dark: '#0b4d3c', light: '#ffffff' } }))));
+  app.get('/admin/qr', need('admin'), h(async (req, res) => {
+    const t = req.t, src = cleanSrc(req.query.src) || 'qr', svg = await QRCode.toString(regUrl(src), { type: 'svg', margin: 2, width: 420, color: { dark: '#0b4d3c', light: '#ffffff' } });
+    res.send(page(req, t('Registration QR'), `<style>@media print{header.top,footer,.noprint{display:none}main{padding:0}}</style>
+      <div style="text-align:center;max-width:520px;margin:0 auto"><h1>ENikah</h1><p style="font-size:20px"><b>${t('Scan to register free')}</b><br>${t('Verified Muslim matrimony · First 3 months free')}</p>
+      <div style="background:#fff;border-radius:16px;padding:12px;display:inline-block">${svg}</div>
+      <p style="font-size:19px"><b>ஸ்கேன் செய்து இலவசமாகப் பதிவு செய்யுங்கள்</b><br>சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை · முதல் 3 மாதங்கள் இலவசம்</p><p>${esc(regUrl(src))}</p>
+      <div class="acts noprint" style="justify-content:center"><button onclick="window.print()">${t('Print')}</button><a class="btn alt" href="/qr.svg?src=${encodeURIComponent(src)}" download="enikah-register-${esc(src)}.svg">${t('Download QR image')}</a><a class="btn alt" href="/admin#qr">${t('Back')}</a></div>
+      <p class="note noprint">${t('Sign-ups from this code are counted under "{src}" in Traffic.', { src: esc(src) })}</p></div>`));
+  }));
+
   app.post('/admin/extend', need('admin'), h(async (req, res) => {
     const p = await getP(+req.body.id); if (!p) return go(res, '/admin', 'Not found.');
     const phone = p.broker || p.owner, kind = p.broker ? 'broker' : 'person', amount = p.broker ? CFG.broker : CFG.person;

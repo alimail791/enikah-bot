@@ -43,12 +43,12 @@ const TA = {
   'Profiles that are not renewed are hidden immediately and come back as soon as the plan is renewed.': 'புதுப்பிக்கப்படாத சுயவிவரங்கள் உடனே மறைக்கப்படும்; திட்டம் புதுப்பிக்கப்பட்டதும் மீண்டும் தெரியும்.',
 
   // privacy & terms
-  'We collect your mobile number, optional email, and the profile details you enter. ID proof is used only to verify you and is deleted after the admin decision; we keep only a "verified" mark and your profile photo.':
-    'உங்கள் மொபைல் எண், விருப்பமான மின்னஞ்சல், நீங்கள் உள்ளிடும் சுயவிவர விவரங்களைச் சேகரிக்கிறோம். அடையாள ஆவணம் சரிபார்ப்புக்கு மட்டுமே; நிர்வாகியின் முடிவுக்குப் பின் நீக்கப்படும். "சரிபார்க்கப்பட்டது" என்ற குறியும் சுயவிவரப் புகைப்படமும் மட்டுமே வைக்கப்படும்.',
+  'We collect your mobile number, email, and the profile details you enter. ID proof is used only to verify you and is deleted after the admin decision; we keep only a "verified" mark and your profile photo.':
+    'உங்கள் மொபைல் எண், மின்னஞ்சல், நீங்கள் உள்ளிடும் சுயவிவர விவரங்களைச் சேகரிக்கிறோம். அடையாள ஆவணம் சரிபார்ப்புக்கு மட்டுமே; நிர்வாகியின் முடிவுக்குப் பின் நீக்கப்படும். "சரிபார்க்கப்பட்டது" என்ற குறியும் சுயவிவரப் புகைப்படமும் மட்டுமே வைக்கப்படும்.',
   'Other members see your profile without your name, phone or photo. These are shared only with a member whose interest you accept (or who accepts yours).':
     'மற்ற உறுப்பினர்கள் உங்கள் பெயர், தொலைபேசி எண், புகைப்படம் இல்லாமலே உங்கள் சுயவிவரத்தைப் பார்ப்பார்கள். நீங்கள் ஏற்ற (அல்லது உங்களை ஏற்ற) உறுப்பினருடன் மட்டுமே இவை பகிரப்படும்.',
-  'You can delete your account and all your data at any time from Account → Delete account. Payments are processed by Razorpay; we do not store card or UPI details.':
-    'கணக்கு → கணக்கை நீக்கு என்பதில் எப்போது வேண்டுமானாலும் உங்கள் கணக்கையும் எல்லா தரவையும் நீக்கலாம். கட்டணங்களை Razorpay கையாள்கிறது; கார்டு அல்லது UPI விவரங்களை நாங்கள் சேமிப்பதில்லை.',
+  'You can delete your account and all your data at any time from Account → Delete account. Payments are made by UPI or through Razorpay; we do not store card or bank details.':
+    'கணக்கு → கணக்கை நீக்கு என்பதில் எப்போது வேண்டுமானாலும் உங்கள் கணக்கையும் எல்லா தரவையும் நீக்கலாம். கட்டணங்கள் UPI அல்லது Razorpay மூலம் செலுத்தப்படுகின்றன; கார்டு அல்லது வங்கி விவரங்களை நாங்கள் சேமிப்பதில்லை.',
   'Contact: {email}': 'தொடர்புக்கு: {email}',
   "ENikah is for adults seeking marriage only (brides 18+, grooms 21+). Profiles must be genuine and entered with the person's consent. Fake, misleading or abusive profiles are blocked without refund.":
     'ENikah திருமணத்தை நாடும் பெரியவர்களுக்கு மட்டுமே (மணமகள் 18+, மணமகன் 21+). சுயவிவரங்கள் உண்மையானவையாகவும் சம்பந்தப்பட்டவரின் ஒப்புதலுடனும் இருக்க வேண்டும். போலியான, தவறான அல்லது தவறாகப் பயன்படுத்தும் சுயவிவரங்கள் பணம் திருப்பித் தரப்படாமல் தடுக்கப்படும்.',
@@ -126,6 +126,65 @@ const TA = {
   "Adding days to a candidate extends the broker's plan.": 'ஒரு வரனுக்கு நாட்கள் சேர்த்தால் தரகரின் திட்டம் நீட்டிக்கப்படும்.', 'Reports': 'புகார்கள்', 'Reason': 'காரணம்', 'No reports.': 'புகார்கள் இல்லை.',
   'Expiring in 7 days': '7 நாட்களில் முடிபவை', 'They get reminders 3 days before and on expiry.': '3 நாட்களுக்கு முன்பும் முடியும் நாளிலும் நினைவூட்டல் அனுப்பப்படும்.', 'Nothing expiring.': 'முடிபவை எதுவும் இல்லை.',
 
+  // matching without maslak
+  'Age {a} · {city} first · their choice fits you too': 'வயது {a} · முதலில் {city} · அவர்களின் விருப்பத்துக்கும் நீங்கள் பொருந்துகிறீர்கள்',
+  '<b>Receive {n} matching profiles a month</b> — matched both ways on age, same city first.': '<b>மாதம் {n} பொருத்தமான வரன்கள்</b> — வயது இரு தரப்புக்கும் பொருந்தும்; முதலில் அதே ஊர்.',
+
+  // email / phone verification & login
+  'We send a code to check it. Used for alerts and password reset.': 'சரிபார்க்க ஒரு குறியீடு அனுப்புவோம். அறிவிப்புகள் மற்றும் கடவுச்சொல் மீட்புக்குப் பயன்படும்.',
+  'Mobile number or email': 'மொபைல் எண் அல்லது மின்னஞ்சல்', 'New here? Register free': 'புதியவரா? இலவசமாகப் பதிவு செய்',
+  'Wrong mobile number, email or password.': 'மொபைல் எண், மின்னஞ்சல் அல்லது கடவுச்சொல் தவறு.',
+  'If that number or email is registered, a reset link has been sent to the email.': 'அந்த எண் அல்லது மின்னஞ்சல் பதிவாகியிருந்தால், மீட்பு இணைப்பு மின்னஞ்சலுக்கு அனுப்பப்பட்டுள்ளது.',
+  'We sent a code to your new email.': 'உங்கள் புதிய மின்னஞ்சலுக்குக் குறியீடு அனுப்பியுள்ளோம்.',
+  'Verify your email': 'உங்கள் மின்னஞ்சலைச் சரிபாருங்கள்', 'Verify your mobile number': 'உங்கள் மொபைல் எண்ணைச் சரிபாருங்கள்',
+  'We sent a 6-digit code to {email}. Check your inbox (and Spam).': '{email} முகவரிக்கு 6 இலக்கக் குறியீடு அனுப்பியுள்ளோம். இன்பாக்ஸையும் (ஸ்பேமையும்) பாருங்கள்.',
+  'We sent a 6-digit code to +{phone} on WhatsApp.': '+{phone} எண்ணுக்கு WhatsApp-இல் 6 இலக்கக் குறியீடு அனுப்பியுள்ளோம்.',
+  'Code': 'குறியீடு', 'Send a new code': 'புதிய குறியீடு அனுப்பு', 'Wrong email?': 'மின்னஞ்சல் தவறா?', 'Change email and send code': 'மின்னஞ்சலை மாற்றிக் குறியீடு அனுப்பு',
+  'Email verified. Thank you!': 'மின்னஞ்சல் சரிபார்க்கப்பட்டது. நன்றி!', 'A new code has been sent.': 'புதிய குறியீடு அனுப்பப்பட்டது.',
+  'Mobile number verified. Thank you!': 'மொபைல் எண் சரிபார்க்கப்பட்டது. நன்றி!', 'Please wait a minute before asking for a new code.': 'புதிய குறியீடு கேட்கும் முன் ஒரு நிமிடம் காத்திருங்கள்.',
+  'This email is already registered. Please log in.': 'இந்த மின்னஞ்சல் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது. உள்நுழையவும்.',
+  'This code has expired. Please ask for a new code.': 'இந்தக் குறியீடு காலாவதியாகிவிட்டது. புதிய குறியீட்டைக் கேளுங்கள்.',
+  'Too many wrong codes. Please ask for a new code.': 'பல முறை தவறான குறியீடு. புதிய குறியீட்டைக் கேளுங்கள்.',
+  'Wrong code. Please check the email and try again.': 'குறியீடு தவறு. மின்னஞ்சலைச் சரிபார்த்து மீண்டும் முயலவும்.',
+  'Could not send the WhatsApp code. Please try again later.': 'WhatsApp குறியீட்டை அனுப்ப முடியவில்லை. பிறகு முயலவும்.',
+  'Wrong code. Please try again.': 'குறியீடு தவறு. மீண்டும் முயலவும்.',
+
+  // paying
+  'Renew plan': 'திட்டத்தைப் புதுப்பி', 'Renew for 30 days — {price}': '30 நாட்களுக்குப் புதுப்பி — {price}',
+  'Renewing adds 30 days to your current end date, so you lose nothing by paying early.': 'புதுப்பித்தால் தற்போதைய முடிவுத் தேதியுடன் 30 நாட்கள் சேர்க்கப்படும் — முன்கூட்டியே செலுத்தினாலும் நாட்கள் வீணாகாது.',
+  'We received your payment details (UTR {utr}). The admin will confirm it soon.': 'உங்கள் கட்டண விவரங்கள் பெறப்பட்டன (UTR {utr}). நிர்வாகி விரைவில் உறுதிப்படுத்துவார்.',
+  'Pay by UPI': 'UPI மூலம் செலுத்துங்கள்',
+  'Scan this QR with GPay, PhonePe, Paytm or any UPI app, or tap the button on your phone. Amount: {price}.': 'GPay, PhonePe, Paytm அல்லது எந்த UPI செயலியிலும் இந்த QR-ஐ ஸ்கேன் செய்யுங்கள், அல்லது உங்கள் மொபைலில் கீழே உள்ள பொத்தானைத் தட்டுங்கள். தொகை: {price}.',
+  'UPI ID': 'UPI ID', 'Open UPI app': 'UPI செயலியைத் திற', 'After paying, enter the UPI transaction ID (UTR)': 'செலுத்திய பின், UPI பரிவர்த்தனை எண்ணை (UTR) உள்ளிடுங்கள்',
+  '12-digit number shown in your UPI app after payment': 'செலுத்திய பின் உங்கள் UPI செயலியில் காட்டப்படும் 12 இலக்க எண்', 'Submit payment details': 'கட்டண விவரங்களை அனுப்பு',
+  'Or pay online with Razorpay': 'அல்லது Razorpay மூலம் ஆன்லைனில் செலுத்துங்கள்', 'Pay online with Razorpay': 'Razorpay மூலம் ஆன்லைனில் செலுத்துங்கள்',
+  'Card, net banking, wallets or UPI. Your plan is extended automatically.': 'கார்டு, நெட் பேங்கிங், வாலட் அல்லது UPI. உங்கள் திட்டம் தானாக நீட்டிக்கப்படும்.',
+  'Pay {price} with Razorpay': 'Razorpay மூலம் {price} செலுத்து',
+  'Thank you. The admin will confirm your UPI payment soon and your plan will be extended.': 'நன்றி. நிர்வாகி விரைவில் உங்கள் UPI கட்டணத்தை உறுதிப்படுத்துவார்; உங்கள் திட்டம் நீட்டிக்கப்படும்.',
+  'Please enter the UPI transaction ID (UTR) shown in your UPI app after paying.': 'செலுத்திய பின் UPI செயலியில் காட்டப்படும் பரிவர்த்தனை எண்ணை (UTR) உள்ளிடுங்கள்.',
+  'This transaction ID was already submitted.': 'இந்தப் பரிவர்த்தனை எண் ஏற்கனவே அனுப்பப்பட்டுள்ளது.',
+
+  // admin additions
+  'Pending': 'காத்திருப்பவை', 'Follow up': 'தொடர் நடவடிக்கை', 'Traffic': 'வருகை', 'Registration QR': 'பதிவு QR குறியீடு',
+  'Accounts registered': 'பதிவு செய்த கணக்குகள்', 'Need follow-up': 'தொடர வேண்டியவர்கள்',
+  'Only members who uploaded an ID and photo appear here. Members who registered but did not upload are under Follow up.': 'அடையாள ஆவணமும் புகைப்படமும் பதிவேற்றியவர்கள் மட்டுமே இங்கே வருவார்கள். பதிவு செய்து பதிவேற்றாதவர்கள் "தொடர் நடவடிக்கை" பகுதியில் உள்ளனர்.',
+  'UPI payments to confirm ({n})': 'உறுதிப்படுத்த வேண்டிய UPI கட்டணங்கள் ({n})', 'Member': 'உறுப்பினர்', 'UTR': 'UTR',
+  'Check this UTR in your bank or UPI app before confirming.': 'உறுதிப்படுத்தும் முன் இந்த UTR-ஐ உங்கள் வங்கி அல்லது UPI செயலியில் சரிபாருங்கள்.',
+  'Confirm payment': 'கட்டணத்தை உறுதிப்படுத்து', 'Not received': 'பெறவில்லை', 'Nothing to confirm.': 'உறுதிப்படுத்த எதுவும் இல்லை.',
+  'Follow up ({n})': 'தொடர் நடவடிக்கை ({n})',
+  'People who registered but did not finish. They get reminder emails automatically; tap WhatsApp to send a ready message from your phone.': 'பதிவு செய்து முடிக்காதவர்கள். அவர்களுக்குத் தானாக நினைவூட்டல் மின்னஞ்சல்கள் போகும்; உங்கள் மொபைலிலிருந்து தயாரான செய்தியை அனுப்ப WhatsApp-ஐத் தட்டுங்கள்.',
+  'Source': 'எங்கிருந்து', 'Call': 'அழை', 'Everyone has finished registering.': 'அனைவரும் பதிவை முடித்துவிட்டனர்.',
+  'Newly verified — send a welcome message': 'புதிதாகச் சரிபார்க்கப்பட்டவர்கள் — வரவேற்புச் செய்தி அனுப்புங்கள்', 'Done': 'முடிந்தது',
+  'Traffic and sign-ups — last 30 days': 'வருகையும் பதிவுகளும் — கடந்த 30 நாட்கள்', 'Visitors': 'பார்வையாளர்கள்', 'Registered': 'பதிவு செய்தவர்கள்', 'Profiles': 'சுயவிவரங்கள்',
+  'No visits recorded yet.': 'இன்னும் வருகை பதிவாகவில்லை.',
+  'Add ?src= to links you share so each one is counted separately, for example:': 'நீங்கள் பகிரும் இணைப்புகளில் ?src= சேர்த்தால் ஒவ்வொன்றும் தனியாகக் கணக்கிடப்படும், உதாரணம்:',
+  'Where will you put it? e.g. poster, masjid, yneet': 'எங்கே வைப்பீர்கள்? உதா. poster, masjid, yneet', 'Make QR code': 'QR குறியீடு உருவாக்கு', 'Show the general QR code': 'பொதுவான QR குறியீட்டைக் காட்டு',
+  'Scan to register free': 'ஸ்கேன் செய்து இலவசமாகப் பதிவு செய்யுங்கள்', 'Verified Muslim matrimony · First 3 months free': 'சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை · முதல் 3 மாதங்கள் இலவசம்',
+  'Print': 'அச்சிடு', 'Download QR image': 'QR படத்தைப் பதிவிறக்கு', 'Back': 'திரும்பு',
+  'Sign-ups from this code are counted under "{src}" in Traffic.': 'இந்தக் குறியீட்டின் மூலம் வரும் பதிவுகள் "வருகை" பகுதியில் "{src}" என்பதன் கீழ் கணக்கிடப்படும்.',
+  'Email not verified': 'மின்னஞ்சல் சரிபார்க்கப்படவில்லை', 'No profile yet': 'சுயவிவரம் இன்னும் இல்லை', 'No ID / photo yet': 'அடையாள ஆவணம் / புகைப்படம் இன்னும் இல்லை',
+  '{n} h ago': '{n} மணி நேரம் முன்', '{n} days ago': '{n} நாட்கள் முன்',
+
   // fixed messages (flash / errors / notifications)
   'Too many attempts. Please try again in 15 minutes.': 'அதிக முயற்சிகள். 15 நிமிடங்கள் கழித்து மீண்டும் முயலவும்.',
   'Wrong mobile number or password.': 'மொபைல் எண் அல்லது கடவுச்சொல் தவறு.',
@@ -195,6 +254,12 @@ const PATTERNS = [
   [/^New verification request: ([\s\S]+)$/, 'புதிய சரிபார்ப்புக் கோரிக்கை: $1'],
   [/^Report on (ENK\d+) from (\+\d+): ([\s\S]*)$/, '$2 இடமிருந்து $1 பற்றிய புகார்: $3'],
   [/^Payment (₹[\d,]+) received from (.+) \((person|broker)\)\.$/, (m, a, b, c) => `${b} இடமிருந்து ${a} கட்டணம் பெறப்பட்டது (${c === 'broker' ? 'தரகர்' : 'உறுப்பினர்'}).`],
+  [/^We could not find your UPI payment with transaction ID (\w+)\. Please check the ID and submit again, or contact us\.$/, 'பரிவர்த்தனை எண் $1 உடைய உங்கள் UPI கட்டணத்தைக் கண்டறிய முடியவில்லை. எண்ணைச் சரிபார்த்து மீண்டும் அனுப்புங்கள், அல்லது எங்களைத் தொடர்பு கொள்ளுங்கள்.'],
+  [/^Payment (\w+) confirmed\.$/, 'கட்டணம் $1 உறுதிப்படுத்தப்பட்டது.'], [/^Payment (\w+) rejected\.$/, 'கட்டணம் $1 நிராகரிக்கப்பட்டது.'],
+  [/^UPI payment to confirm: (₹[\d,]+) from (.+) \((\+\d+)\), UTR (\w+)$/, '$2 ($3) இடமிருந்து $1 UPI கட்டணம் உறுதிப்படுத்தப்பட வேண்டும், UTR $4'],
+  [/^New registration: (\+\d+) as (.+?) · (.+)$/, 'புதிய பதிவு: $1 · $3'],
+  [/^New (profile by|candidate added by broker) (\+\d+): ([\s\S]+)$/, 'புதிய சுயவிவரம் ($2): $3'],
+  [/^New broker account: ([\s\S]+)$/, 'புதிய தரகர் கணக்கு: $1'],
   [/^(ENK\d+) approved\.$/, '$1 அங்கீகரிக்கப்பட்டது.'], [/^(ENK\d+) rejected\.$/, '$1 நிராகரிக்கப்பட்டது.'],
   [/^Broker (\+\d+) approved\.$/, 'தரகர் $1 அங்கீகரிக்கப்பட்டார்.'], [/^Broker (\+\d+) rejected\.$/, 'தரகர் $1 நிராகரிக்கப்பட்டார்.'],
   [/^(ENK\d+) blocked — hidden from everyone\.$/, '$1 தடுக்கப்பட்டது — யாருக்கும் தெரியாது.'], [/^(ENK\d+) unblocked\.$/, '$1 தடை நீக்கப்பட்டது.'],
