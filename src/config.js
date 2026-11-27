@@ -4,7 +4,7 @@ export const CFG = {
   person: Number(E.PRICE_PERSON || 2000),   // ₹ per 30 days, bride/groom
   broker: Number(E.PRICE_BROKER || 1000),   // ₹ per 30 days, broker
   monthly: Number(E.MONTHLY_LIMIT || 5),    // matching profiles per plan month
-  free: Number(E.FREE_DAYS || 30),          // free days after registration
+  free: Number(E.FREE_DAYS || 90),          // free days after registration
   cap: Number(E.BROKER_CAP || 10),          // candidates per broker
   base: (E.BASE_URL || 'http://localhost:3000').replace(/\/$/, ''),
   lang: E.TEMPLATE_LANG || 'en',

@@ -21,7 +21,7 @@ const TA = {
   'Candidates': 'வரன்கள்', 'Interests': 'விருப்பங்கள்', 'My profile': 'என் சுயவிவரம்', 'Matches': 'வரன்கள்',
   'Privacy': 'தனியுரிமை', 'Terms': 'விதிமுறைகள்', 'Open': 'திற', 'Save': 'சேமி', 'Edit': 'திருத்து', 'Find': 'தேடு', 'Status': 'நிலை', 'From': 'இருந்து', 'To': 'க்கு',
   'ENikah · Verified profiles only · Contacts shared only when both sides accept': 'ENikah · சரிபார்க்கப்பட்ட சுயவிவரங்கள் மட்டும் · இரு தரப்பும் ஏற்ற பின்பே தொடர்பு விவரங்கள் பகிரப்படும்',
-  'ENikah — verified Muslim matrimony for families. Free registration, first month free.': 'ENikah — குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை. இலவசப் பதிவு, முதல் மாதம் இலவசம்.',
+  'ENikah — verified Muslim matrimony for families. Free registration, first 3 months free.': 'ENikah — குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை. இலவசப் பதிவு, முதல் 3 மாதங்கள் இலவசம்.',
   'Active': 'செயலில்', 'Expired': 'காலாவதி', 'Verified': 'சரிபார்க்கப்பட்டது', 'Via verified broker': 'சரிபார்க்கப்பட்ட தரகர் மூலம்',
   'any': 'எதுவும்', 'any maslak': 'எந்த மஸ்லக்கும்', '{maslak} only': '{maslak} மட்டும்',
   'Age {a} · {m} · {city} first · their choice fits you too': 'வயது {a} · {m} · முதலில் {city} · அவர்களின் விருப்பத்துக்கும் நீங்கள் பொருந்துகிறீர்கள்',
@@ -30,14 +30,14 @@ const TA = {
   // home
   'Verified Muslim matrimony': 'சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை',
   'Verified Muslim matrimony for families': 'குடும்பங்களுக்கான சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை',
-  'Register free with your first month free. Every profile is checked with ID and photo. You see only active, verified profiles that fit your choice — and theirs. Contacts are shared only when both sides accept.':
-    'இலவசமாகப் பதிவு செய்யுங்கள் — முதல் மாதம் இலவசம். ஒவ்வொரு சுயவிவரமும் அடையாள ஆவணம் மற்றும் புகைப்படத்துடன் சரிபார்க்கப்படுகிறது. உங்கள் விருப்பத்துக்கும் அவர்களின் விருப்பத்துக்கும் பொருந்தும், செயலில் உள்ள சரிபார்க்கப்பட்ட வரன்களை மட்டுமே காண்பீர்கள். இரு தரப்பும் ஏற்ற பின்பே தொடர்பு விவரங்கள் பகிரப்படும்.',
+  'Register free with your first 3 months free. Every profile is checked with ID and photo. You see only active, verified profiles that fit your choice — and theirs. Contacts are shared only when both sides accept.':
+    'இலவசமாகப் பதிவு செய்யுங்கள் — முதல் 3 மாதங்கள் இலவசம். ஒவ்வொரு சுயவிவரமும் அடையாள ஆவணம் மற்றும் புகைப்படத்துடன் சரிபார்க்கப்படுகிறது. உங்கள் விருப்பத்துக்கும் அவர்களின் விருப்பத்துக்கும் பொருந்தும், செயலில் உள்ள சரிபார்க்கப்பட்ட வரன்களை மட்டுமே காண்பீர்கள். இரு தரப்பும் ஏற்ற பின்பே தொடர்பு விவரங்கள் பகிரப்படும்.',
   'Go to my profile': 'என் சுயவிவரத்துக்குச் செல்', 'Arch with crescent': 'பிறையுடன் கூடிய வளைவு', 'How it works': 'எப்படிச் செயல்படுகிறது',
-  '<b>Register</b> for yourself or a family member — free, first month free.': 'உங்களுக்காகவோ குடும்ப உறுப்பினருக்காகவோ <b>பதிவு செய்யுங்கள்</b> — இலவசம், முதல் மாதம் இலவசம்.',
+  '<b>Register</b> for yourself or a family member — free, first 3 months free.': 'உங்களுக்காகவோ குடும்ப உறுப்பினருக்காகவோ <b>பதிவு செய்யுங்கள்</b> — இலவசம், முதல் 3 மாதங்கள் இலவசம்.',
   '<b>Get verified:</b> upload an ID and a photo. Our admin checks them; the ID is deleted after checking.': '<b>சரிபார்ப்பு:</b> அடையாள ஆவணம் மற்றும் புகைப்படத்தைப் பதிவேற்றுங்கள். எங்கள் நிர்வாகி சரிபார்ப்பார்; சரிபார்த்த பின் அடையாள ஆவணம் நீக்கப்படும்.',
   '<b>Receive {n} matching profiles a month</b> — matched both ways on age and maslak, same city first.': '<b>மாதம் {n} பொருத்தமான வரன்கள்</b> — வயது மற்றும் மஸ்லக் இரு தரப்புக்கும் பொருந்தும்; முதலில் அதே ஊர்.',
   '<b>Send interest.</b> When both sides accept, contact details are shared. Please involve family / wali.': '<b>விருப்பம் அனுப்புங்கள்.</b> இரு தரப்பும் ஏற்றதும் தொடர்பு விவரங்கள் பகிரப்படும். குடும்பத்தினர் / வலீயை உடன் வைத்துப் பேசுங்கள்.',
-  'Simple pricing': 'எளிய கட்டணம்', 'Free': 'இலவசம்', 'Registration + first month': 'பதிவு + முதல் மாதம்',
+  'Simple pricing': 'எளிய கட்டணம்', 'Free': 'இலவசம்', 'Registration + first 3 months': 'பதிவு + முதல் 3 மாதங்கள்',
   'per 30 days for brides and grooms': 'மணமகள் / மணமகனுக்கு 30 நாட்களுக்கு',
   'per 30 days for marriage brokers, up to {n} candidates': 'திருமணத் தரகர்களுக்கு 30 நாட்களுக்கு, அதிகபட்சம் {n} வரன்கள்',
   'Profiles that are not renewed are hidden immediately and come back as soon as the plan is renewed.': 'புதுப்பிக்கப்படாத சுயவிவரங்கள் உடனே மறைக்கப்படும்; திட்டம் புதுப்பிக்கப்பட்டதும் மீண்டும் தெரியும்.',
@@ -58,7 +58,7 @@ const TA = {
     'ENikah அடையாள ஆவணங்களைச் சரிபார்க்கிறது; ஆனால் யாருடைய கூற்றுகளுக்கும் உத்தரவாதம் அளிப்பதில்லை. எந்த முடிவுக்கும் முன் குடும்பத்தினர் தாங்களே விசாரித்துக்கொள்ள வேண்டும்.',
 
   // accounts
-  "First month free. Use your own number or a family member's.": 'முதல் மாதம் இலவசம். உங்கள் எண் அல்லது குடும்ப உறுப்பினரின் எண்ணைப் பயன்படுத்தலாம்.',
+  "First 3 months free. Use your own number or a family member's.": 'முதல் 3 மாதங்கள் இலவசம். உங்கள் எண் அல்லது குடும்ப உறுப்பினரின் எண்ணைப் பயன்படுத்தலாம்.',
   'Mobile number': 'மொபைல் எண்', '10-digit mobile': '10 இலக்க மொபைல் எண்', 'Password': 'கடவுச்சொல்', 'At least 6 characters': 'குறைந்தது 6 எழுத்துகள்',
   'Email': 'மின்னஞ்சல்', 'Optional — for alerts and password reset': 'விருப்பம் — அறிவிப்புகள் மற்றும் கடவுச்சொல் மீட்புக்கு',
   'I am registering as': 'நான் பதிவு செய்வது', 'Bride / groom (myself or family)': 'மணமகள் / மணமகன் (நான் அல்லது குடும்பத்தினர்)', 'Marriage broker': 'திருமணத் தரகர்',
@@ -73,7 +73,7 @@ const TA = {
   'Removes your account, all your candidates, interests and documents permanently.': 'உங்கள் கணக்கு, உங்கள் வரன்கள் அனைத்தும், விருப்பங்கள், ஆவணங்கள் நிரந்தரமாக நீக்கப்படும்.',
 
   // profile form
-  'Create profile': 'சுயவிவரத்தை உருவாக்கு', 'Create the profile': 'சுயவிவரத்தை உருவாக்குங்கள்', 'For yourself or a family member. Free, with the first month free.': 'உங்களுக்காகவோ குடும்ப உறுப்பினருக்காகவோ. இலவசம், முதல் மாதம் இலவசம்.',
+  'Create profile': 'சுயவிவரத்தை உருவாக்கு', 'Create the profile': 'சுயவிவரத்தை உருவாக்குங்கள்', 'For yourself or a family member. Free, with the first 3 months free.': 'உங்களுக்காகவோ குடும்ப உறுப்பினருக்காகவோ. இலவசம், முதல் 3 மாதங்கள் இலவசம்.',
   'Are you a marriage broker?': 'நீங்கள் திருமணத் தரகரா?', 'Set up a broker account instead': 'அதற்குப் பதிலாகத் தரகர் கணக்கைத் தொடங்குங்கள்',
   'Full name': 'முழுப் பெயர்', 'Shown only after both sides accept an interest': 'இரு தரப்பும் விருப்பத்தை ஏற்ற பின்பே காட்டப்படும்', 'Registering for': 'யாருக்காக', 'Choose…': 'தேர்ந்தெடுக்கவும்…',
   'Age': 'வயது', 'City / town': 'ஊர் / நகரம்', 'Maslak': 'மஸ்லக்', 'Marital status': 'திருமண நிலை', 'Education': 'கல்வி', 'Profession': 'தொழில்',

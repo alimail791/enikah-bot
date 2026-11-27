@@ -4,7 +4,7 @@ enikah.vasulbook.com · Node.js + PostgreSQL · Razorpay payment links · Resend
 
 ## What members can do
 - **Register** with mobile number + password (email optional, for alerts and password reset). Bride/groom (self or family) or marriage broker.
-- **Free first 30 days**, then ₹2,000 / 30 days (brides & grooms) or ₹1,000 / 30 days (brokers, up to 10 candidates). Renewing adds 30 days to the current end date.
+- **Free first 3 months (90 days)**, then ₹2,000 / 30 days (brides & grooms) or ₹1,000 / 30 days (brokers, up to 10 candidates). Renewing adds 30 days to the current end date.
 - **Verification:** upload ID + photo; admin approves on the admin page; ID image is deleted after the decision.
 - **Matches:** 5 verified, active profiles per plan month, matched both ways (age range + maslak), same city first. Earlier matches stay listed.
 - **Privacy:** cards show no name, phone or photo. When an interest is accepted, both sides see name, phone (call / WhatsApp link) and photo.

@@ -57,7 +57,7 @@ function page(req, title, body, opts = {}) {
     : u.type === 'broker' ? `<a href="/broker">${t('Candidates')}</a><a href="/interests">${t('Interests')}</a><a href="/account">${t('Account')}</a>${out}`
     : `<a href="/home">${t('My profile')}</a>${u.pid ? `<a href="/matches/${u.pid}">${t('Matches')}</a><a href="/interests">${t('Interests')}</a>` : ''}<a href="/account">${t('Account')}</a>${out}`;
   return `<!doctype html><html lang="${req.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(opts.fullTitle || title + ' · ENikah')}</title>
-<meta name="description" content="${esc(opts.desc || t('ENikah — verified Muslim matrimony for families. Free registration, first month free.'))}">
+<meta name="description" content="${esc(opts.desc || t('ENikah — verified Muslim matrimony for families. Free registration, first 3 months free.'))}">
 ${opts.head || '<meta name="robots" content="noindex">'}<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b4d3c'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23f3dfa8' font-family='Georgia'%3EE%3C/text%3E%3C/svg%3E">
 ${req.lang === 'ta' ? '<link rel="preconnect" href="https://fonts.gstatic.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600&family=Noto+Serif+Tamil&display=swap" rel="stylesheet">' : ''}<style>${CSS}${SEO_CSS}</style></head>
 <body><header class="top"><a class="brand" href="${urlFor(req.lang, '/')}">ENikah</a><nav>${nav}${other}</nav></header><main>${m}${body}</main>
@@ -136,25 +136,25 @@ export function mount(app) {
   }
   both('/', (req, res) => { const t = req.t, S = seoHome(req); res.send(page(req, t('Verified Muslim matrimony'), `
     <section class="hero"><div><h1>${t('Verified Muslim matrimony for families')}</h1>
-      <p>${t('Register free with your first month free. Every profile is checked with ID and photo. You see only active, verified profiles that fit your choice — and theirs. Contacts are shared only when both sides accept.')}</p>
+      <p>${t('Register free with your first 3 months free. Every profile is checked with ID and photo. You see only active, verified profiles that fit your choice — and theirs. Contacts are shared only when both sides accept.')}</p>
       <div class="acts"><a class="btn gold" href="${req.user ? '/home' : '/register'}">${t(req.user ? 'Go to my profile' : 'Register free')}</a>${req.user ? '' : `<a class="btn alt" href="/login">${t('Log in')}</a>`}</div></div>
       <div class="arch" role="img" aria-label="${esc(t('Arch with crescent'))}"></div></section>
-    <h2>${t('How it works')}</h2><ol class="steps"><li>${t('<b>Register</b> for yourself or a family member — free, first month free.')}</li><li>${t('<b>Get verified:</b> upload an ID and a photo. Our admin checks them; the ID is deleted after checking.')}</li><li>${t('<b>Receive {n} matching profiles a month</b> — matched both ways on age and maslak, same city first.', { n: CFG.monthly })}</li><li>${t('<b>Send interest.</b> When both sides accept, contact details are shared. Please involve family / wali.')}</li></ol>
-    <h2>${t('Simple pricing')}</h2><div class="price"><div class="box"><b>${t('Free')}</b>${t('Registration + first month')}</div><div class="box"><b>${rs(CFG.person)}</b>${t('per 30 days for brides and grooms')}</div><div class="box"><b>${rs(CFG.broker)}</b>${t('per 30 days for marriage brokers, up to {n} candidates', { n: CFG.cap })}</div></div>
+    <h2>${t('How it works')}</h2><ol class="steps"><li>${t('<b>Register</b> for yourself or a family member — free, first 3 months free.')}</li><li>${t('<b>Get verified:</b> upload an ID and a photo. Our admin checks them; the ID is deleted after checking.')}</li><li>${t('<b>Receive {n} matching profiles a month</b> — matched both ways on age and maslak, same city first.', { n: CFG.monthly })}</li><li>${t('<b>Send interest.</b> When both sides accept, contact details are shared. Please involve family / wali.')}</li></ol>
+    <h2>${t('Simple pricing')}</h2><div class="price"><div class="box"><b>${t('Free')}</b>${t('Registration + first 3 months')}</div><div class="box"><b>${rs(CFG.person)}</b>${t('per 30 days for brides and grooms')}</div><div class="box"><b>${rs(CFG.broker)}</b>${t('per 30 days for marriage brokers, up to {n} candidates', { n: CFG.cap })}</div></div>
     <p class="note">${t('Profiles that are not renewed are hidden immediately and come back as soon as the plan is renewed.')}</p>${S.extra}`, { path: '/', fullTitle: S.title, desc: S.desc, head: S.head })); });
 
   both('/privacy', (req, res) => { const t = req.t; res.send(page(req, t('Privacy'), `<h1>${t('Privacy')}</h1><div class="box">
     <p>${t('We collect your mobile number, optional email, and the profile details you enter. ID proof is used only to verify you and is deleted after the admin decision; we keep only a "verified" mark and your profile photo.')}</p>
     <p>${t('Other members see your profile without your name, phone or photo. These are shared only with a member whose interest you accept (or who accepts yours).')}</p>
     <p>${t('You can delete your account and all your data at any time from Account → Delete account. Payments are processed by Razorpay; we do not store card or UPI details.')}</p>
-    <p>${t('Contact: {email}', { email: esc(CONTACT()) })}</p></div>`, { path: '/privacy', head: headTags(req, { path: '/privacy', title: t('Privacy') + ' · ENikah', desc: t('ENikah — verified Muslim matrimony for families. Free registration, first month free.') }) })); });
+    <p>${t('Contact: {email}', { email: esc(CONTACT()) })}</p></div>`, { path: '/privacy', head: headTags(req, { path: '/privacy', title: t('Privacy') + ' · ENikah', desc: t('ENikah — verified Muslim matrimony for families. Free registration, first 3 months free.') }) })); });
   both('/terms', (req, res) => { const t = req.t; res.send(page(req, t('Terms'), `<h1>${t('Terms')}</h1><div class="box">
     <p>${t("ENikah is for adults seeking marriage only (brides 18+, grooms 21+). Profiles must be genuine and entered with the person's consent. Fake, misleading or abusive profiles are blocked without refund.")}</p>
     <p>${t('Plans run for 30 days and are renewed manually. Profiles without an active plan are hidden. Fees are non-refundable once matches have been shown.')}</p>
-    <p>${t("ENikah verifies identity documents but does not guarantee anyone's statements. Families should make their own enquiries before any commitment.")}</p></div>`, { path: '/terms', head: headTags(req, { path: '/terms', title: t('Terms') + ' · ENikah', desc: t('ENikah — verified Muslim matrimony for families. Free registration, first month free.') }) })); });
+    <p>${t("ENikah verifies identity documents but does not guarantee anyone's statements. Families should make their own enquiries before any commitment.")}</p></div>`, { path: '/terms', head: headTags(req, { path: '/terms', title: t('Terms') + ' · ENikah', desc: t('ENikah — verified Muslim matrimony for families. Free registration, first 3 months free.') }) })); });
 
   // ---------- accounts ----------
-  const regForm = (req, e, b = {}) => { const t = req.t; return page(req, t('Register'), `<h1>${t('Register free')}</h1><p class="note">${t("First month free. Use your own number or a family member's.")}</p>${errBox(t, e)}
+  const regForm = (req, e, b = {}) => { const t = req.t; return page(req, t('Register'), `<h1>${t('Register free')}</h1><p class="note">${t("First 3 months free. Use your own number or a family member's.")}</p>${errBox(t, e)}
     <form class="fl box" method="post" action="/register">
       <label>${t('Mobile number')}<input name="phone" inputmode="tel" autocomplete="tel" value="${esc(b.phone)}" placeholder="${esc(t('10-digit mobile'))}" required></label>
       <label>${t('Password')} <small>${t('At least 6 characters')}</small><input name="password" type="password" autocomplete="new-password" required minlength="6"></label>
@@ -232,7 +232,7 @@ export function mount(app) {
   });
 
   // ---------- person ----------
-  app.get('/profile/new', need(null), (req, res) => { const t = req.t; res.send(page(req, t('Create profile'), `<h1>${t('Create the profile')}</h1><p class="note">${t('For yourself or a family member. Free, with the first month free.')}</p>${profileForm(t, {}, { submit: 'Create profile', action: '/profile/new' })}
+  app.get('/profile/new', need(null), (req, res) => { const t = req.t; res.send(page(req, t('Create profile'), `<h1>${t('Create the profile')}</h1><p class="note">${t('For yourself or a family member. Free, with the first 3 months free.')}</p>${profileForm(t, {}, { submit: 'Create profile', action: '/profile/new' })}
     <p class="note">${t('Are you a marriage broker?')} <a href="/broker/setup">${t('Set up a broker account instead')}</a></p>`)); });
   app.post('/profile/new', need(null), h(async (req, res) => {
     const t = req.t, v = C.validateProfile(req.body);

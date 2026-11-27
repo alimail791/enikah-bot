@@ -45,7 +45,7 @@ try {
   let r = await admin.post('/register', { phone: ADMIN, password: 'adminpass', kind: 'person' });
   ok(r.loc === '/admin', 'admin number registers straight into the admin panel');
   const bride = await member('9111111111', P('Ayesha Begum', 'F', '22', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'Teacher', '25', '32', 'same'));
-  ok(bride.pid === 1001 && /free for 30 days/.test(bride.created.msg), 'bride registers free for 30 days, gets ENK1001');
+  ok(bride.pid === 1001 && /free for 90 days/.test(bride.created.msg), 'bride registers free for 90 days (3 months), gets ENK1001');
   r = await new Browser().post('/login', { phone: '9111111111', password: 'wrong' });
   ok(r.status === 401, 'wrong password rejected');
   r = await new Browser().post('/login', { phone: '+91 91111 11111', password: 'secret12' });
@@ -176,7 +176,7 @@ try {
   await ta.post('/register', { phone: '9444444444', password: 'secret12', kind: 'person' });
   r = await ta.post('/profile/new', P('Fathima', 'F', '23', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'Teacher', '', '', 'any'));
   r = await ta.get(r.loc + '?msg=' + encodeURIComponent(r.msg));
-  ok(/பதிவு செய்யப்பட்டது! 30 நாட்கள் இலவசம்/.test(r.body) && /ஸலாம், Fathima/.test(r.body) && /சரிபார்க்கப்படவில்லை/.test(r.body), 'dashboard and messages in Tamil');
+  ok(/பதிவு செய்யப்பட்டது! 90 நாட்கள் இலவசம்/.test(r.body) && /ஸலாம், Fathima/.test(r.body) && /சரிபார்க்கப்படவில்லை/.test(r.body), 'dashboard and messages in Tamil');
   r = await new Browser().req('/', { headers: { 'accept-language': 'ta-IN,ta;q=0.9' } });
   ok(r.status === 302 && r.loc === '/ta', 'Tamil phones get Tamil by default');
   console.log('Search engines');
