@@ -6,7 +6,7 @@ import pg from 'pg';
 const PORT = 3999, B = `http://localhost:${PORT}`, ADMIN = '9000000000';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 await db.query('drop schema public cascade; create schema public;');
-const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, MONTHLY_LIMIT: '2', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
+const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r, j) => { srv.stdout.on('data', d => String(d).includes('ENikah site on') && r()); srv.on('exit', () => j(new Error('server exited'))); });
 
 class Browser {
@@ -162,6 +162,19 @@ try {
   r = await bride.post('/account/delete', { confirm: 'DELETE' });
   ok(/deleted/.test(r.msg) && (await db.query(`select count(*) from users where phone='919111111111'`)).rows[0].count === '0', 'member deletes account and data');
   ok((await new Browser().get('/')).status === 200 && (await new Browser().get('/privacy')).status === 200, 'public pages load');
+
+  console.log('Admin login page');
+  const a2 = new Browser();
+  ok((await a2.get('/admin')).loc === '/admin/login', 'admin panel asks for the admin login');
+  r = await a2.post('/admin/login', { username: 'boss@example.com', password: 'wrong-password' });
+  ok(r.status === 401 && /Wrong username or password/.test(r.body), 'wrong admin password rejected');
+  r = await a2.post('/admin/login', { username: 'boss@example.com', password: 'test-admin-pass-123' });
+  ok(r.loc === '/admin' && (await a2.get('/admin')).status === 200, 'admin logs in with email + password');
+  const a3 = new Browser();
+  r = await a3.post('/admin/login', { username: '9000000000', password: 'test-admin-pass-123' });
+  ok(r.loc === '/admin', 'admin can also use the mobile number as username');
+  r = await new Browser().post('/admin/login', { username: '9111111112', password: 'test-admin-pass-123' });
+  ok(r.status === 401, 'other numbers cannot use the admin login');
 
   console.log('Tamil');
   const ta = new Browser();

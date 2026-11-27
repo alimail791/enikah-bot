@@ -118,6 +118,7 @@ const TA = {
   'Profile': 'சுயவிவரம்', 'Details': 'விவரங்கள்', 'No candidates yet.': 'இன்னும் வரன்கள் இல்லை.',
 
   // admin
+  'Admin login': 'நிர்வாக உள்நுழைவு', 'Username': 'பயனர் பெயர்', 'Admin email or mobile number': 'நிர்வாக மின்னஞ்சல் அல்லது மொபைல் எண்', 'Wrong username or password.': 'பயனர் பெயர் அல்லது கடவுச்சொல் தவறு.',
   'Live & verified profiles': 'செயலில் உள்ள சரிபார்க்கப்பட்ட சுயவிவரங்கள்', 'Hidden (not renewed)': 'மறைக்கப்பட்டவை (புதுப்பிக்கப்படவில்லை)', 'Members · active brokers': 'உறுப்பினர்கள் · செயலில் உள்ள தரகர்கள்',
   'Interests · accepted': 'விருப்பங்கள் · ஏற்கப்பட்டவை', 'Revenue this month (total {total})': 'இந்த மாத வருவாய் (மொத்தம் {total})', 'Pending verification ({n})': 'சரிபார்ப்புக்குக் காத்திருப்பவை ({n})',
   'ID': 'அடையாள ஆவணம்', 'Photo': 'புகைப்படம்', 'No document': 'ஆவணம் இல்லை', 'Open PDF': 'PDF திற', 'Approve': 'அங்கீகரி', 'Reject': 'நிராகரி', 'Nothing pending.': 'காத்திருப்பவை எதுவும் இல்லை.',

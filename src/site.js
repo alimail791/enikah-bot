@@ -1,7 +1,8 @@
 // enikah.vasulbook.com — the whole service as a website (English / Tamil).
 import multer from 'multer';
 import { q, one, all, getP, P_SQL, visible } from './db.js';
-import { CFG, esc, D, rs } from './config.js';
+import crypto from 'crypto';
+import { CFG, esc, D, rs, ADMINS } from './config.js';
 import * as C from './core.js';
 import { createLink, markPaid, callbackOk } from './pay.js';
 import { sendMail } from './mail.js';
@@ -97,7 +98,7 @@ async function startSession(res, phone) {
   res.cookie('sid', t, { httpOnly: true, sameSite: 'lax', secure: CFG.base.startsWith('https'), maxAge: 60 * 864e5, path: '/' });
 }
 const need = (...types) => (req, res, next) => {
-  if (!req.user) return go(res, '/login?next=' + encodeURIComponent(req.originalUrl));
+  if (!req.user) return go(res, (types.includes('admin') ? '/admin/login' : '/login') + '?next=' + encodeURIComponent(req.originalUrl));
   if (types.length && !types.includes(req.user.type)) return go(res, '/home');
   next();
 };
@@ -389,6 +390,28 @@ export function mount(app) {
   }));
 
   // ---------- admin ----------
+  // Separate admin login (like VasulBook): username = admin email or admin mobile, password = ADMIN_PASSWORD in Railway.
+  const adminForm = (req, e) => { const t = req.t; return page(req, t('Admin login'), `<h1>${t('Admin login')}</h1>${errBox(t, e)}<form class="fl box" method="post" action="/admin/login${req.query.next ? '?next=' + encodeURIComponent(req.query.next) : ''}">
+    <label>${t('Username')} <small>${t('Admin email or mobile number')}</small><input name="username" autocomplete="username" required></label><label>${t('Password')}<input name="password" type="password" autocomplete="current-password" required></label><button>${t('Log in')}</button></form>`); };
+  const adminUser = u => {
+    u = String(u || '').trim().toLowerCase();
+    const emails = String(process.env.ADMIN_EMAIL || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+    const ph = C.normPhone(u);
+    return emails.includes(u) || (ph && ADMINS.includes(ph));
+  };
+  const pwOk = pw => { const real = process.env.ADMIN_PASSWORD || ''; if (real.length < 8) return false;
+    const a = crypto.createHash('sha256').update(String(pw)).digest(), b = crypto.createHash('sha256').update(real).digest(); return crypto.timingSafeEqual(a, b); };
+  app.get('/admin/login', (req, res) => req.user?.type === 'admin' ? go(res, '/admin') : res.send(adminForm(req)));
+  app.post('/admin/login', h(async (req, res) => {
+    if (limited('admin:' + req.ip, 8)) return res.status(429).send(adminForm(req, 'Too many attempts. Please try again in 15 minutes.'));
+    if (!ADMINS.length || !adminUser(req.body.username) || !pwOk(req.body.password)) return res.status(401).send(adminForm(req, 'Wrong username or password.'));
+    const ph = ADMINS[0];
+    await q(`insert into users(phone,type) values($1,'admin') on conflict(phone) do update set type='admin'`, [ph]);
+    await startSession(res, ph);
+    const next = String(req.query.next || '');
+    go(res, next.startsWith('/admin') ? next : '/admin');
+  }));
+
   app.get('/admin', need('admin'), h(async (req, res) => {
     const t = req.t;
     const r = await one(`select (select count(*) from (${P_SQL}) v where v.live and v.status='verified') live, (select count(*) from (${P_SQL}) v where not v.live) hidden,
