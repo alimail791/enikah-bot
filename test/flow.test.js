@@ -56,6 +56,9 @@ try {
   r = await young.post('/profile/new', P('Test', 'M', '20', 'Chennai', 'Sunni Hanafi', 'Never married', 'B.Sc', 'X', '', '', 'any'));
   ok(r.status === 400 && /Legal marriage age/.test(r.body), 'groom under 21 rejected');
 
+  const alerts = (await db.query(`select text from notes where phone='91${ADMIN}' order by id`)).rows.map(r => r.text).join('\n');
+  ok(/New registration: \+919111111111 as bride \/ groom/.test(alerts) && /New profile by \+919111111111: ENK1001 Ayesha Begum — Bride, 22, Chennai/.test(alerts), 'admin alerted about new registration and profile');
+
   console.log('Verification');
   r = await bride.get('/matches/1001');
   ok(/Only verified members/.test(r.body), 'unverified member cannot see matches');
@@ -136,6 +139,7 @@ try {
   ok(r.loc === '/broker/setup', 'broker goes to broker setup');
   r = await broker.post('/broker/setup', { name: 'Rahim Bureau', city: 'Ambur' });
   ok(/Broker account created/.test(r.msg), 'broker account free for first month');
+  ok((await db.query(`select count(*) from notes where phone='91${ADMIN}' and text like 'New broker account: Rahim Bureau%'`)).rows[0].count === '1', 'admin alerted about new broker');
   await verifyAndApprove(broker, 'b');
   r = await broker.post('/broker/new', P('Sana', 'F', '24', 'Ambur', 'Sunni Hanafi', 'Never married', 'B.Sc', 'Lab tech', '', '', 'any'));
   const cid = +/ENK(\d+)/.exec(r.msg)[1];

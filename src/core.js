@@ -47,6 +47,8 @@ export async function notifyAdmins(text, link) {
 }
 
 // ---------- accounts ----------
+const istNow = () => new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+
 export async function register({ phone, password, email, kind }) {
   const ph = normPhone(phone);
   if (!ph) return { err: 'Please enter a valid 10-digit Indian mobile number.' };
@@ -58,6 +60,7 @@ export async function register({ phone, password, email, kind }) {
   const type = isAdmin(ph) ? 'admin' : null;
   await q(`insert into users(phone,pw,email,type) values($1,$2,$3,$4)
     on conflict(phone) do update set pw=$2, email=$3, type=coalesce(users.type,$4)`, [ph, hashPw(password), email || null, type]);
+  if (type !== 'admin') await notifyAdmins(`New registration: ${plus(ph)} as ${kind === 'broker' ? 'marriage broker' : 'bride / groom'}${email ? ' · ' + email : ''} · ${istNow()}`, '/admin').catch(e => console.error('[alert]', e));
   return { phone: ph, next: type === 'admin' ? '/admin' : kind === 'broker' ? '/broker/setup' : '/profile/new' };
 }
 
@@ -94,6 +97,8 @@ export async function createProfile(phone, d, asBroker) {
     values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,${asBroker ? 'null' : `date_trunc('second', now()+make_interval(days=>${CFG.free}))`}) returning id`,
     [asBroker ? null : phone, asBroker ? phone : null, d.name, d.g, d.age, d.city, d.maslak, d.marital, d.edu, d.job, d.pa_min, d.pa_max, d.pm]);
   if (!asBroker) await q(`update users set type='person', name=$2, pid=$3 where phone=$1`, [phone, d.name, r.id]);
+  const who = asBroker ? `candidate added by broker ${plus(phone)}` : `profile by ${plus(phone)}`;
+  await notifyAdmins(`New ${who}: ENK${r.id} ${d.name} — ${d.g === 'F' ? 'Bride' : 'Groom'}, ${d.age}, ${d.city} · ${d.maslak} · ${d.edu} · ${d.job} · ${d.marital} · ${istNow()}`, '/admin').catch(e => console.error('[alert]', e));
   return r.id;
 }
 
@@ -109,6 +114,7 @@ export async function setupBroker(phone, name, city) {
   name = clean(name, 60); city = clean(city);
   if (!name || !city) return 'Please enter your name / bureau name and area.';
   await q(`update users set type='broker', name=$2, city=$3, status='unverified', exp=date_trunc('second', now()+make_interval(days=>${CFG.free})) where phone=$1 and type is null`, [phone, name, city]);
+  await notifyAdmins(`New broker account: ${name}, ${city} (${plus(phone)}) · ${istNow()}`, '/admin').catch(e => console.error('[alert]', e));
 }
 
 export async function canAddCandidate(phone) {
