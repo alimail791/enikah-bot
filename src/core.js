@@ -204,6 +204,8 @@ export async function submitDocs(phone, target, idf, photo) {
   await notifyAdmins(`New verification request: ${desc}`, '/admin');
 }
 
+// Template name for the 'verified' message (enikah_verified is under appeal; change in Railway if needed).
+const TPL_VERIFIED = () => E.WA_TPL_VERIFIED || 'enikah_verified';
 const verWord = (ok, l) => ok ? (l === 'ta' ? 'அங்கீகரிக்கப்பட்டது' : 'approved') : (l === 'ta' ? 'ஏற்கப்படவில்லை, மீண்டும் பதிவேற்றவும்' : 'not approved, please upload again');
 export async function decide(kind, ref, ok) {
   if (kind === 'b') {
@@ -211,7 +213,7 @@ export async function decide(kind, ref, ok) {
     if (!u) return 'Already handled.';
     await q(`delete from docs where kind='b' and ref=$1`, [ref]);
     await notify(ref, ok ? 'Your broker ID is verified. You can now add and verify candidates.' : 'Your broker verification was not approved. Please upload a clear ID again.', ok ? '/broker' : '/verify/b',
-      ['enikah_newverified', l => [l === 'ta' ? 'தரகர் கணக்கு' : 'broker account', verWord(ok, l)]]);
+      [TPL_VERIFIED(), l => [l === 'ta' ? 'தரகர் கணக்கு' : 'broker account', verWord(ok, l)]]);
     return `Broker ${plus(ref)} ${ok ? 'approved' : 'rejected'}.`;
   }
   const p = await one(`update profiles set status=$2 where id=$1 and status='pending' returning *, 'ENK'||id as code`, [+ref, ok ? 'verified' : 'unverified']);
@@ -219,7 +221,7 @@ export async function decide(kind, ref, ok) {
   if (ok) await q(`update profiles set (photo,photo_mime)=(select photo,photo_mime from docs where kind='p' and ref=$1 order by id desc limit 1) where id=$2`, [String(+ref), +ref]);
   await q(`delete from docs where kind='p' and ref=$1`, [String(+ref)]);
   await notify(p.broker || p.owner, ok ? `${p.code} is verified! You can now see verified matching profiles.` : `Verification of ${p.code} was not approved. Please upload a clear ID and photo again.`, ok ? `/matches/${p.id}` : `/verify/${p.id}`,
-    ['enikah_newverified', l => [p.code, verWord(ok, l)]]);
+    [TPL_VERIFIED(), l => [p.code, verWord(ok, l)]]);
   return `${p.code} ${ok ? 'approved' : 'rejected'}.`;
 }
 

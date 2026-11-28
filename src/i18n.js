@@ -186,6 +186,7 @@ const TA = {
   '{n} h ago': '{n} மணி நேரம் முன்', '{n} days ago': '{n} நாட்கள் முன்',
 
   'Help on WhatsApp': 'WhatsApp உதவி', 'Need help? WhatsApp us': 'உதவி வேண்டுமா? WhatsApp-இல் தொடர்பு கொள்ளுங்கள்',
+  'We could not send a WhatsApp code right now. You can continue; we will check your number later.': 'இப்போது WhatsApp குறியீட்டை அனுப்ப முடியவில்லை. நீங்கள் தொடரலாம்; உங்கள் எண்ணைப் பிறகு சரிபார்ப்போம்.',
   // fixed messages (flash / errors / notifications)
   'Too many attempts. Please try again in 15 minutes.': 'அதிக முயற்சிகள். 15 நிமிடங்கள் கழித்து மீண்டும் முயலவும்.',
   'Wrong mobile number or password.': 'மொபைல் எண் அல்லது கடவுச்சொல் தவறு.',

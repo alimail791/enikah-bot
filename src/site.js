@@ -107,7 +107,7 @@ const need = (...types) => (req, res, next) => {
   if (types.length && !types.includes(req.user.type)) return go(res, '/home');
   // Members must verify their email (and phone, when WhatsApp codes are switched on) before using the site.
   if (req.user.type !== 'admin' && !req.user.email_ok) return go(res, '/verify-email?next=' + encodeURIComponent(req.originalUrl));
-  if (req.user.type !== 'admin' && C.phoneOtpOn() && !req.user.phone_ok) return go(res, '/verify-phone?next=' + encodeURIComponent(req.originalUrl));
+  if (req.user.type !== 'admin' && C.phoneOtpOn() && !req.user.phone_ok && !req.phoneSkip) return go(res, '/verify-phone?next=' + encodeURIComponent(req.originalUrl));
   next();
 };
 const safeNext = n => { n = String(n || ''); return n.startsWith('/') && !n.startsWith('//') ? n : '/home'; };
@@ -126,7 +126,8 @@ export function mount(app) {
       req.lang = 'en';
     } else req.lang = LANGS.includes(ck.lang) ? ck.lang : /^ta\b/i.test(req.get('accept-language') || '') ? 'ta' : 'en';
     req.t = makeT(req.lang);
-    if (ck.sid) { const tk = await C.getToken(ck.sid, 'sess'); if (tk) { req.user = await C.user(tk.phone); req.sid = ck.sid; } }
+    if (ck.sid) { const tk = await C.getToken(ck.sid, 'sess'); if (tk) { req.user = await C.user(tk.phone); req.sid = ck.sid;
+      req.phoneSkip = !!(await one(`select 1 from tokens where phone=$1 and kind='phoneskip' and expires>now()`, [tk.phone])); } }
     next();
   }));
   app.use(track.middleware);
@@ -279,7 +280,8 @@ export function mount(app) {
     if (!C.phoneOtpOn() || req.user.phone_ok || req.user.type === 'admin') return go(res, safeNext(req.query.next));
     const has = await one(`select 1 from tokens where phone=$1 and kind='phonecode' and expires>now()`, [req.user.phone]);
     const e = has ? null : await C.sendPhoneCode(req.user.phone);
-    res.send(codeForm(req, 'phone', e));
+    if (e) { await C.newToken('phoneskip', req.user.phone, '', null, 24); return go(res, safeNext(req.query.next), 'We could not send a WhatsApp code right now. You can continue; we will check your number later.'); }
+    res.send(codeForm(req, 'phone'));
   }));
   app.post('/verify-phone', signedIn, h(async (req, res) => {
     if (limited('pcode:' + req.user.phone, 12)) return res.status(429).send(codeForm(req, 'phone', 'Too many attempts. Please try again in 15 minutes.'));

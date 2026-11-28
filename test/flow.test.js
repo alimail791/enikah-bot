@@ -6,7 +6,7 @@ import pg from 'pg';
 const PORT = 3999, B = `http://localhost:${PORT}`, ADMIN = '9000000000';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 await db.query('drop schema public cascade; create schema public;');
-const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', UPI_ID: 'test@oksbi', HELP_WHATSAPP: '919443424064', WA_SEND: '1', WA_TOKEN: 't', WA_PHONE_ID: 'p', WA_NUMBER: '9443424064', DRY_RUN: '1', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
+const srv = spawn('node', ['src/index.js'], { env: { ...process.env, PORT, BASE_URL: B, DEV_MODE: '1', ADMIN_PHONES: '91' + ADMIN, ADMIN_EMAIL: 'boss@example.com', ADMIN_PASSWORD: 'test-admin-pass-123', MONTHLY_LIMIT: '2', UPI_ID: 'test@oksbi', HELP_WHATSAPP: '919443424064', WA_SEND: '1', WA_TOKEN: 't', WA_PHONE_ID: 'p', WA_NUMBER: '9443424064', DRY_RUN: '1', PHONE_OTP_TEMPLATE: 'enikah_otp', RAZORPAY_KEY_ID: '', RESEND_API_KEY: '' }, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r, j) => { srv.stdout.on('data', d => String(d).includes('ENikah site on') && r()); srv.on('exit', () => j(new Error('server exited'))); });
 
 class Browser {
@@ -31,7 +31,12 @@ const P = (name, g, age, city, maslak, marital, edu, job, pa_min, pa_max, pm) =>
 async function signup(b, phone, kind = 'person') {
   const r = await b.post('/register', { phone, password: 'secret12', email: `u${phone}@test.in`, kind });
   const code = (await db.query(`select data->>'code' c from tokens where phone=$1 and kind='emailcode'`, ['91' + phone])).rows[0]?.c;
-  const v = await b.post('/verify-email?next=' + encodeURIComponent(new URLSearchParams(r.full?.split('?')[1] || '').get('next') || '/home'), { code });
+  let v = await b.post('/verify-email?next=' + encodeURIComponent(new URLSearchParams(r.full?.split('?')[1] || '').get('next') || '/home'), { code });
+  if (v.loc === '/verify-phone') {                       // WhatsApp code to the mobile number
+    await b.get(v.full);
+    const pc = (await db.query(`select data->>'code' c from tokens where phone=$1 and kind='phonecode'`, ['91' + phone])).rows[0]?.c;
+    v = await b.post(v.full, { code: pc });
+  }
   return { r, v };
 }
 async function member(phone, prof) {
@@ -70,7 +75,14 @@ try {
   ok(r.status === 400 && /Wrong code/.test(r.body), 'wrong code rejected');
   const evCode = (await db.query(`select data->>'code' c from tokens where phone='919222222228' and kind='emailcode'`)).rows[0].c;
   r = await ev.post('/verify-email?next=/profile/new', { code: evCode });
-  ok(r.loc === '/profile/new' && /Email verified/.test(r.msg), 'right code verifies the email');
+  ok(r.loc === '/verify-phone' && /Email verified/.test(r.msg), 'right code verifies the email, then asks for the mobile code');
+  await ev.get(r.full);
+  const otp = (await (await fetch(B + '/dev/wa')).json()).find(m => m.template?.name === 'enikah_otp' && m.to === '919222222228');
+  ok(otp && otp.template.components[0].parameters[0].text.length === 6, 'WhatsApp code sent with enikah_otp');
+  r = await ev.post(r.full, { code: '000000' });
+  ok(r.status === 400 && /Wrong code/.test(r.body), 'wrong WhatsApp code rejected');
+  r = await ev.post('/verify-phone?next=/profile/new', { code: otp.template.components[0].parameters[0].text });
+  ok(r.loc === '/profile/new' && /Mobile number verified/.test(r.msg), 'right WhatsApp code verifies the mobile');
   ok(!/name="maslak"|name="pm"/.test((await ev.get('/profile/new')).body), 'profile form has no maslak');
   r = await new Browser().post('/login', { phone: 'ev@test.in', password: 'secret12' });
   ok(r.loc === '/home', 'login with email works');
@@ -245,7 +257,7 @@ try {
 
   const wam = await (await fetch(B + '/dev/wa')).json();
   ok(wam.some(m => m.to === '919222222221' && m.template.name === 'enikah_interest' && m.template.components[0].parameters[0].text === 'ENK1002'), 'interest also sent as WhatsApp template');
-  ok(wam.some(m => m.template.name === 'enikah_newverified' && m.template.language.code === 'en'), 'verified message sent on WhatsApp');
+  ok(wam.some(m => m.template.name === 'enikah_verified' && m.template.language.code === 'en'), 'verified message sent on WhatsApp');
   ok(wam.some(m => m.template.name === 'enikah_paid'), 'payment confirmation sent on WhatsApp');
   ok(/wa\.me\/919443424064/.test((await new Browser().get('/login')).body), 'help WhatsApp number shown');
 
