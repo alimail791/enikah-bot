@@ -4,6 +4,7 @@ import { mount } from './site.js';
 import { pingIndexNow } from './seo.js';
 import { onPaid, runReminders } from './core.js';
 import { runFollowups } from './followup.js';
+import { waReady } from './wa.js';
 import { markPaid, webhookOk } from './pay.js';
 
 const E = process.env;
@@ -47,6 +48,8 @@ app.use((err, req, res, next) => {
 await migrate();
 const port = Number(E.PORT || 3000);
 app.listen(port, () => { console.log(`ENikah site on :${port}`); if (E.DEV_MODE !== '1') setTimeout(pingIndexNow, 15000); });
+// Check WhatsApp at start so the logs show which number ENikah will send from.
+waReady().then(ok => console.log(ok ? '[wa] ready' : '[wa] not sending'));
 setInterval(() => runReminders().catch(e => console.error('[cron]', e)), 60 * 60 * 1000);
 setTimeout(() => runReminders().catch(e => console.error('[cron]', e)), 60 * 1000);
 setInterval(() => runFollowups().catch(e => console.error('[followup]', e)), 30 * 60 * 1000);
