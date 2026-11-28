@@ -261,6 +261,25 @@ try {
   ok(wam.some(m => m.template.name === 'enikah_paid'), 'payment confirmation sent on WhatsApp');
   ok(/wa\.me\/919443424064/.test((await new Browser().get('/login')).body), 'help WhatsApp number shown');
 
+  console.log('Sharing & partner posters');
+  r = await new Browser().get('/');
+  ok(/qr\.svg\?src=home/.test(r.body) && /wa\.me\/\?text=/.test(r.body) && /qr\.png\?src=home&amp;dl=1/.test(r.body) && /print\?src=home/.test(r.body) && /href="\/poster"/.test(r.body), 'home page shows QR with WhatsApp, download, print and poster maker');
+  r = await new Browser().get('/qr.png?src=home&dl=1');
+  ok(r.status === 200 && /enikah-qr-home\.png/.test((await fetch(B + '/qr.png?src=home&dl=1')).headers.get('content-disposition')), 'QR downloads as PNG');
+  ok(/ஸ்கேன் செய்து/.test((await new Browser().get('/print?src=home')).body), 'printable poster (English + Tamil)');
+  const hall = new Browser();
+  r = await hall.post('/poster', { name: 'Al-Ameen Marriage Hall', kind: 'Marriage hall', city: 'Vellore', phone: '9777777777' });
+  ok(/^\/poster\/[\w-]+$/.test(r.loc) && /poster is ready/.test(r.msg), 'partner creates a poster');
+  const posterPath = r.loc;
+  r = await hall.get(posterPath);
+  ok(/Al-Ameen Marriage Hall/.test(r.body) && /qr\.svg\?src=p\d+-al-ameen-marriage-hall/.test(r.body) && /invites%20you%20to%20ENikah/.test(r.body), 'poster shows their name and their own QR');
+  const slug = /src=(p\d+-al-ameen-marriage-hall)/.exec(r.body)[1];
+  const fam = new Browser(); await fam.get('/register?src=' + slug); await signup(fam, '9888888888');
+  r = await hall.get(posterPath);
+  ok(/<b>1<\/b><span>Families registered/.test(r.body), 'partner sees families registered through their QR');
+  r = await admin.get('/admin');
+  ok(/Al-Ameen Marriage Hall/.test(r.body) && /Poster partners \(1\)/.test(r.body), 'admin sees poster partners');
+
   console.log('Tamil');
   const ta = new Browser();
   r = await ta.get('/lang/ta');

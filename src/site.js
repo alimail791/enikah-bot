@@ -72,6 +72,34 @@ ${req.lang === 'ta' ? '<link rel="preconnect" href="https://fonts.gstatic.com"><
 <footer>${t('ENikah · Verified profiles only · Contacts shared only when both sides accept')}<br>${HELP() ? `${t('Help on WhatsApp')}: <a href="https://wa.me/${HELP()}">+${HELP().replace(/^91/, '91 ')}</a><br>` : ''}<a href="${urlFor(req.lang, '/privacy')}">${t('Privacy')}</a> · <a href="${urlFor(req.lang, '/terms')}">${t('Terms')}</a></footer></body></html>`;
 }
 const helpLine = t => HELP() ? `<p class="note">${t('Need help? WhatsApp us')}: <a href="https://wa.me/${HELP()}?text=${encodeURIComponent('ENikah help')}">+${HELP()}</a></p>` : '';
+// QR + share buttons for a registration link tagged with a source.
+const PARTNER_KINDS = ['Marriage broker', 'Marriage hall', 'Party hall', 'Masjid / Jamath', 'Shop / business', 'Other'];
+const shareText = (t, url, who) => (who ? t('{who} invites you to ENikah — verified Muslim matrimony. Register free, first 3 months free: {url}', { who, url }) : t('ENikah — verified Muslim matrimony. Register free, first 3 months free: {url}', { url }));
+function shareBox(t, src, { who = '', print = '' } = {}) {
+  const url = `${CFG.base}/register?src=${encodeURIComponent(src)}`, q = encodeURIComponent(src);
+  return `<div class="share"><img class="qr" src="/qr.svg?src=${q}" width="220" height="220" alt="${esc(t('QR code to register on ENikah'))}">
+    <div class="acts"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(shareText(t, url, who))}" target="_blank" rel="noopener">${t('Share on WhatsApp')}</a>
+    <button type="button" class="alt shareimg" data-src="${esc(src)}" data-text="${esc(shareText(t, url, who))}" hidden>${t('Share QR image')}</button>
+    <a class="btn alt" href="/qr.png?src=${q}&amp;dl=1">${t('Download QR')}</a><a class="btn alt" href="${esc(print || '/print?src=' + q)}">${t('Print poster')}</a></div>
+    <p class="note">${esc(url)}</p></div>`;
+}
+const SHARE_JS = `<script>{for(const b of document.querySelectorAll('.shareimg')){if(!(navigator.canShare&&window.File))continue;b.hidden=false;b.addEventListener('click',async()=>{try{const r=await fetch('/qr.png?src='+encodeURIComponent(b.dataset.src));const f=new File([await r.blob()],'enikah-qr.png',{type:'image/png'});if(navigator.canShare({files:[f]}))await navigator.share({files:[f],text:b.dataset.text});else location.href='https://wa.me/?text='+encodeURIComponent(b.dataset.text)}catch(e){}})}}</script>`;
+const POSTER_CSS = `<style>.poster{max-width:560px;margin:0 auto;background:#fff;color:#1d2421;border:3px solid #c9a24a;border-radius:20px;overflow:hidden;text-align:center}
+.poster .band{background:#0b4d3c;color:#f3dfa8;padding:18px}.poster .band b{font:40px Georgia,serif;display:block}.poster .band span{color:#dcebe3}
+.poster .who{font:700 26px/1.25 Georgia,"Noto Serif Tamil",serif;color:#0b4d3c;margin:18px 16px 2px}.poster .kind{color:#5d6762;margin:0 16px}
+.poster .big{font-size:21px;font-weight:700;margin:14px 16px 6px}.poster img{width:min(300px,80%);height:auto}.poster .ta{font-size:18px;margin:8px 16px}.poster .url{font-size:15px;color:#0b4d3c;margin:6px 16px 18px;word-break:break-all}
+.share{display:flex;flex-wrap:wrap;gap:16px;align-items:center}.share img.qr{background:#fff;border-radius:14px;padding:8px;border:1px solid var(--line)}
+@media print{header.top,footer,.noprint{display:none!important}main{padding:0;max-width:none}body{background:#fff}.poster{border-width:4px;max-width:none}}</style>`;
+function posterHtml(t, src, { who = '', kind = '', city = '' } = {}) {
+  const url = `${CFG.base}/register?src=${encodeURIComponent(src)}`;
+  return `<div class="poster"><div class="band"><b>ENikah</b><span>Verified Muslim matrimony · சரிபார்க்கப்பட்ட முஸ்லிம் திருமண சேவை</span></div>
+    ${who ? `<p class="who">${esc(who)}</p><p class="kind">${esc([kind, city].filter(Boolean).join(' · '))}</p>` : ''}
+    <p class="big">Scan to register free — first 3 months free</p><img src="/qr.svg?src=${encodeURIComponent(src)}" alt="QR">
+    <p class="ta"><b>ஸ்கேன் செய்து இலவசமாகப் பதிவு செய்யுங்கள் — முதல் 3 மாதங்கள் இலவசம்</b></p>
+    <p class="note" style="margin:4px 16px">Every profile checked with ID & photo · Contacts shared only when both families accept<br>ஒவ்வொரு சுயவிவரமும் அடையாள ஆவணத்துடன் சரிபார்க்கப்படுகிறது</p>
+    <p class="url">${esc(url)}</p></div>`;
+}
+
 const errBox = (t, e) => e ? `<div class="err">${esc(t(e))}</div>` : '';
 const opt = (t, list, v) => list.map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(t(x))}</option>`).join('');
 const sideT = (t, p) => t(p.g === 'F' ? 'Bride' : 'Groom');
@@ -152,6 +180,9 @@ export function mount(app) {
       <div class="acts"><a class="btn gold" href="${req.user ? '/home' : '/register'}">${t(req.user ? 'Go to my profile' : 'Register free')}</a>${req.user ? '' : `<a class="btn alt" href="/login">${t('Log in')}</a>`}</div></div>
       <div class="arch" role="img" aria-label="${esc(t('Arch with crescent'))}"></div></section>
     <h2>${t('How it works')}</h2><ol class="steps"><li>${t('<b>Register</b> for yourself or a family member — free, first 3 months free.')}</li><li>${t('<b>Get verified:</b> upload an ID and a photo. Our admin checks them; the ID is deleted after checking.')}</li><li>${t('<b>Receive {n} matching profiles a month</b> — matched both ways on age, same city first.', { n: CFG.monthly })}</li><li>${t('<b>Send interest.</b> When both sides accept, contact details are shared. Please involve family / wali.')}</li></ol>
+    <h2>${t('Share ENikah')}</h2><div class="box">${shareBox(t, 'home')}
+      <p style="margin-top:14px"><b>${t('Run a marriage hall, broker office, party hall, masjid or shop?')}</b> ${t('Make a free poster with your own name and QR code. Families who register through it are counted for you.')}</p>
+      <div class="acts"><a class="btn gold" href="/poster">${t('Make my poster')}</a></div></div>${SHARE_JS}
     <h2>${t('Simple pricing')}</h2><div class="price"><div class="box"><b>${t('Free')}</b>${t('Registration + first 3 months')}</div><div class="box"><b>${rs(CFG.person)}</b>${t('per 30 days for brides and grooms')}</div><div class="box"><b>${rs(CFG.broker)}</b>${t('per 30 days for marriage brokers, up to {n} candidates', { n: CFG.cap })}</div></div>
     <p class="note">${t('Profiles that are not renewed are hidden immediately and come back as soon as the plan is renewed.')}</p>${S.extra}`, { path: '/', fullTitle: S.title, desc: S.desc, head: S.head })); });
 
@@ -520,11 +551,12 @@ export function mount(app) {
     const find = req.query.find && await getP(+String(req.query.find).replace(/\D/g, ''));
     const upis = await all(`select p.*, u.name from payments p left join users u on u.phone=p.phone where p.method='upi' and p.status='claimed' order by p.id`);
     const fu = await incomplete(), ver = await recentlyVerified(), traffic = await track.report(30);
+    const partners = await all(`select p.*, (select count(*) from users u where split_part(u.source,' · ',1)=p.slug and u.pw is not null)::int regs from partners p order by regs desc, id desc limit 100`);
     const stageT = { email: t('Email not verified'), profile: t('No profile yet'), docs: t('No ID / photo yet') };
     const ago = d => { const hrs = Math.round((Date.now() - new Date(d)) / 3600e3); return hrs < 24 ? t('{n} h ago', { n: hrs }) : t('{n} days ago', { n: Math.round(hrs / 24) }); };
     const det = p => `${sideT(t, p)}, ${p.age}, ${esc(p.city)} · ${esc(p.edu)} · ${esc(p.job)} · ${esc(t(p.marital))}`;
     res.send(page(req, t('Admin'), `<h1>${t('Admin')}</h1>
-      <p class="note"><a href="#pending">${t('Pending')}</a> · <a href="#upi">UPI</a> · <a href="#followup">${t('Follow up')}</a> · <a href="#traffic">${t('Traffic')}</a> · <a href="#qr">${t('Registration QR')}</a> · <a href="#find">${t('Find a profile')}</a> · <a href="#reports">${t('Reports')}</a></p>
+      <p class="note"><a href="#pending">${t('Pending')}</a> · <a href="#upi">UPI</a> · <a href="#followup">${t('Follow up')}</a> · <a href="#traffic">${t('Traffic')}</a> · <a href="#qr">${t('Registration QR')}</a> · <a href="#partners">${t('Partners')}</a> · <a href="#find">${t('Find a profile')}</a> · <a href="#reports">${t('Reports')}</a></p>
       <div class="stats"><div class="stat"><b>${r.accounts}</b><span>${t('Accounts registered')}</span></div><div class="stat"><b>${fu.length}</b><span>${t('Need follow-up')}</span></div><div class="stat"><b>${r.live}</b><span>${t('Live & verified profiles')}</span></div><div class="stat"><b>${r.hidden}</b><span>${t('Hidden (not renewed)')}</span></div><div class="stat"><b>${r.people} · ${r.brokers}</b><span>${t('Members · active brokers')}</span></div><div class="stat"><b>${r.ints} · ${r.acc}</b><span>${t('Interests · accepted')}</span></div><div class="stat"><b>${rs(r.mon)}</b><span>${t('Revenue this month (total {total})', { total: rs(r.total) })}</span></div></div>
       <h2 id="pending">${t('Pending verification ({n})', { n: pend.length + pb.length })}</h2>
       <p class="note">${t('Only members who uploaded an ID and photo appear here. Members who registered but did not upload are under Follow up.')}</p>
@@ -549,6 +581,9 @@ export function mount(app) {
       <form class="row" method="get" action="/admin/qr"><input name="src" placeholder="${esc(t('Where will you put it? e.g. poster, masjid, yneet'))}" maxlength="30"><button>${t('Make QR code')}</button></form>
       <div class="acts"><a class="btn alt" href="/admin/qr?src=qr">${t('Show the general QR code')}</a></div>
 
+      <h2 id="partners">${t('Poster partners ({n})', { n: partners.length })}</h2>
+      ${partners.length ? `<table class="stack"><thead><tr><th>${t('Name')}</th><th>${t('Type')}</th><th>${t('Mobile')}</th><th>${t('Families registered')}</th><th></th></tr></thead><tbody>${partners.map(x => `<tr><td><b>${esc(x.name)}</b><br><span class="note">${esc(x.city)} · ${esc(x.slug)}</span></td><td>${esc(t(x.kind))}</td><td>+${esc(x.phone)}</td><td>${x.regs}</td><td><div class="acts"><a class="btn alt" href="/poster/${esc(x.token)}">${t('Poster')}</a><a class="btn" href="https://wa.me/${esc(x.phone)}" target="_blank" rel="noopener">WhatsApp</a></div></td></tr>`).join('')}</tbody></table>` : `<p class="note">${t('No partners yet. Share {link} with marriage halls and brokers.', { link: esc(CFG.base) + '/poster' })}</p>`}
+
       <h2 id="find">${t('Find a profile')}</h2><form class="row" method="get" action="/admin"><input name="find" placeholder="ENK1234" value="${esc(req.query.find)}"><button>${t('Find')}</button></form>
       ${req.query.find ? (find ? `<div class="box"><h3>${esc(find.code)} · ${esc(find.name)}</h3><p>${det(find)}<br>${t('Status')}: <b>${t('status:' + find.status)}</b> · ${t(find.live ? 'Active' : 'Expired')} · ${t('Plan till {date}', { date: D(find.till) })} · ${find.broker ? t('Broker') + ' +' + esc(find.broker) : t('Mobile') + ' +' + esc(find.owner)}</p>
         <div class="acts"><form method="post" action="/admin/block"><input type="hidden" name="id" value="${find.id}"><input type="hidden" name="on" value="${find.status === 'blocked' ? 0 : 1}"><button class="${find.status === 'blocked' ? '' : 'red'}">${t(find.status === 'blocked' ? 'Unblock' : 'Block')}</button></form>
@@ -572,6 +607,54 @@ export function mount(app) {
 
   // Registration QR: public SVG (so it can be printed or shared) and a printable admin poster.
   const regUrl = src => `${CFG.base}/register${src ? '?src=' + encodeURIComponent(src) : ''}`;
+  app.get('/qr.png', h(async (req, res) => {
+    const src = String(req.query.src || 'qr').toLowerCase().replace(/[^\w.\-]/g, '').slice(0, 40) || 'qr';
+    const png = await QRCode.toBuffer(regUrl(src), { type: 'png', margin: 2, width: 800, color: { dark: '#0b4d3c', light: '#ffffff' } });
+    res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+    if (req.query.dl) res.set('Content-Disposition', `attachment; filename="enikah-qr-${src}.png"`);
+    res.send(png);
+  }));
+  // Printable poster for any source tag.
+  app.get('/print', (req, res) => { const t = req.t, src = String(req.query.src || 'poster').toLowerCase().replace(/[^\w.\-]/g, '').slice(0, 40) || 'poster';
+    res.send(page(req, t('ENikah poster'), `${POSTER_CSS}${posterHtml(t, src)}<div class="acts noprint" style="justify-content:center;margin-top:16px"><button onclick="window.print()">${t('Print')}</button><a class="btn alt" href="/qr.png?src=${encodeURIComponent(src)}&amp;dl=1">${t('Download QR')}</a><a class="btn alt" href="/">${t('Back')}</a></div>
+      <p class="note noprint" style="text-align:center">${t('Tip: choose "Save as PDF" in the print window to keep a copy.')}</p>`)); });
+
+  // ---------- partner posters (brokers, marriage halls, party halls, masjids, shops) ----------
+  const partnerForm = (req, e, b = {}) => { const t = req.t; return page(req, t('Make your ENikah poster'), `<h1>${t('Make your ENikah poster')}</h1>
+    <p>${t('Free for marriage brokers, marriage halls, party halls, masjids, shops and anyone who helps families. Your name goes on the poster, and you can see how many families registered through your QR code.')}</p>${errBox(t, e)}
+    <form class="fl box" method="post" action="/poster"><label>${t('Name to show on the poster')}<input name="name" value="${esc(b.name)}" required maxlength="60" placeholder="${esc(t('e.g. Al-Ameen Marriage Hall'))}"></label>
+    <label>${t('Type')}<select name="kind" required><option value="">${t('Choose…')}</option>${PARTNER_KINDS.map(k => `<option value="${esc(k)}" ${b.kind === k ? 'selected' : ''}>${esc(t(k))}</option>`).join('')}</select></label>
+    <label>${t('City / town')}<input name="city" value="${esc(b.city)}" required maxlength="40"></label>
+    <label>${t('Your mobile number')} <small>${t('Only the ENikah admin sees this')}</small><input name="phone" inputmode="tel" value="${esc(b.phone)}" required></label>
+    <button>${t('Create my poster')}</button></form>`); };
+  app.get('/poster', (req, res) => res.send(partnerForm(req)));
+  app.post('/poster', h(async (req, res) => {
+    if (limited('poster:' + req.ip, 10)) return res.status(429).send(partnerForm(req, 'Too many attempts. Please try again in 15 minutes.', req.body));
+    const name = String(req.body.name || '').replace(/\s+/g, ' ').trim().slice(0, 60), city = String(req.body.city || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    const kind = PARTNER_KINDS.includes(req.body.kind) ? req.body.kind : '', phone = C.normPhone(req.body.phone);
+    if (!name || !kind || !city) return res.status(400).send(partnerForm(req, 'Please fill in the name, type and city.', req.body));
+    if (!phone) return res.status(400).send(partnerForm(req, 'Please enter a valid 10-digit Indian mobile number.', req.body));
+    const token = crypto.randomBytes(12).toString('base64url');
+    const row = await one(`insert into partners(name,kind,city,phone,token) values($1,$2,$3,$4,$5) returning id`, [name, kind, city, phone, token]);
+    const slug = `p${row.id}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'partner'}`;
+    await q('update partners set slug=$2 where id=$1', [row.id, slug]);
+    await C.notifyAdmins(`New poster partner: ${name} (${kind}, ${city}) +${phone} · tag ${slug}`, '/admin#partners');
+    go(res, `/poster/${token}`, 'Your poster is ready. Keep this page link — it shows how many families registered through your QR code.');
+  }));
+  app.get('/poster/:token', h(async (req, res) => {
+    const t = req.t, p = await one('select * from partners where token=$1', [String(req.params.token)]);
+    if (!p) return res.status(404).send(page(req, t('Not found.'), `<h1>${t('Not found.')}</h1><p><a href="/poster">${t('Make my poster')}</a></p>`));
+    const st = await one(`select count(*) filter (where pw is not null)::int regs,
+      count(*) filter (where exists(select 1 from profiles x where (x.owner=users.phone or x.broker=users.phone) and x.status='verified'))::int ver
+      from users where split_part(source,' · ',1) = $1`, [p.slug]);
+    const visits = +(await one('select count(*) n from visits where source=$1', [p.slug])).n;
+    res.send(page(req, t('ENikah poster'), `${POSTER_CSS}<p class="noprint">${t('Your poster with your name and QR code. Print it, save it as PDF, or share the QR on WhatsApp.')}</p>
+      ${posterHtml(t, p.slug, { who: p.name, kind: t(p.kind), city: p.city })}
+      <div class="box noprint" style="margin-top:16px"><div class="stats"><div class="stat"><b>${visits}</b><span>${t('Scans / visits')}</span></div><div class="stat"><b>${st.regs}</b><span>${t('Families registered')}</span></div><div class="stat"><b>${st.ver}</b><span>${t('Verified profiles')}</span></div></div>
+      <div class="acts"><button onclick="window.print()">${t('Print')}</button></div>
+      <h3 style="margin-top:16px">${t('Share')}</h3>${shareBox(t, p.slug, { who: p.name, print: '/poster/' + p.token })}
+      <p class="note">${t('Bookmark this page to check your numbers later. Do not share this page link; share the QR code or the WhatsApp message.')}</p></div>${SHARE_JS}`));
+  }));
   const cleanSrc = s => String(s || '').toLowerCase().replace(/[^\w.\-]/g, '').slice(0, 30);
   app.get('/qr.svg', h(async (req, res) => res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(await QRCode.toString(regUrl(cleanSrc(req.query.src) || 'qr'), { type: 'svg', margin: 2, width: 600, color: { dark: '#0b4d3c', light: '#ffffff' } }))));
   app.get('/admin/qr', need('admin'), h(async (req, res) => {

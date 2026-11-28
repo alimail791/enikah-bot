@@ -76,6 +76,9 @@ create index if not exists visits_created on visits(created);
 create table if not exists followups(phone text, step text, sent timestamptz default now(), primary key(phone, step));
 create table if not exists settings(key text primary key, value text);
 
+create table if not exists partners(
+  id serial primary key, slug text unique, token text unique, name text, kind text, city text, phone text, created timestamptz default now());
+
 create table if not exists reports(
   id serial primary key, phone text, pid int, reason text, created timestamptz default now());
 `;

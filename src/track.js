@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { q, all } from './db.js';
 
 const BOT = /bot|crawl|spider|slurp|preview|headless|monitor|curl|wget|python|axios|httpclient|scan|lighthouse/i;
-const PRIVATE = /^\/(admin|home|account|broker|dashboard|matches|interests|photo|profile|verify|verify-email|verify-phone|reset|renew|paid|lang|dev|login|logout|forgot|qr|rzp|health|og\.png|robots\.txt|sitemap\.xml)(\/|$|\.)/;
+const PRIVATE = /^\/(admin|home|account|broker|dashboard|matches|interests|photo|profile|verify|verify-email|verify-phone|reset|renew|paid|lang|dev|login|logout|forgot|qr|print|rzp|health|og\.png|robots\.txt|sitemap\.xml)(\/|$|\.)/;
 
 const ck = (req, name) => { const m = new RegExp(`(?:^|;\\s*)${name}=([^;]*)`).exec(req.headers.cookie || ''); try { return m ? decodeURIComponent(m[1]) : ''; } catch { return ''; } };
 
